@@ -6,10 +6,20 @@
     <description>Recent content on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Sep 2018 23:44:50 +0200</lastBuildDate>
+    <lastBuildDate>Sat, 15 Sep 2018 23:47:55 +0200</lastBuildDate>
     
 	<atom:link href="https://mandreyel.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Servo Internals: Loading Pages</title>
+      <link>https://mandreyel.github.io/posts/servo-internals-load-url/</link>
+      <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
+      
+      <guid>https://mandreyel.github.io/posts/servo-internals-load-url/</guid>
+      <description>Disclaimer This is a heavily work-in-progress draft. Some details may not be correct.
+Starting points There are currently four ways in which a URL may be loaded: - the first time the browser is opened (when a new top-level browsing context is created); - when the user clicks on a link or a script navigates the page (both are handled by the script thread); - when the user types a URL (this is handled by the compositor); - and finally the WebDriver can also initiate URL loads.</description>
+    </item>
     
     <item>
       <title>Servo Internals</title>
