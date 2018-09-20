@@ -3,6 +3,16 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://mandreyel.github.io/post/fav-vim-settings/</loc>
+    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://mandreyel.github.io/posts/fav-vim-settings/</loc>
+    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://mandreyel.github.io/post/servo-internals-load-url/</loc>
     <lastmod>2018-09-15T23:47:55+02:00</lastmod>
   </url>
@@ -29,13 +39,13 @@
   
   <url>
     <loc>https://mandreyel.github.io/post/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
+    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://mandreyel.github.io/posts/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
+    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -58,8 +68,14 @@
   </url>
   
   <url>
+    <loc>https://mandreyel.github.io/tags/vim/</loc>
+    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>https://mandreyel.github.io/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
+    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
     <priority>0</priority>
   </url>
   

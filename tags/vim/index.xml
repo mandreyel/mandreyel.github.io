@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Vim on mandreyel&#39;s blog</title>
+    <link>https://mandreyel.github.io/tags/vim/</link>
+    <description>Recent content in Vim on mandreyel&#39;s blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 20 Sep 2018 21:49:45 +0200</lastBuildDate>
+    
+	<atom:link href="https://mandreyel.github.io/tags/vim/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Favorite Vim Settings</title>
+      <link>https://mandreyel.github.io/post/fav-vim-settings/</link>
+      <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
+      
+      <guid>https://mandreyel.github.io/post/fav-vim-settings/</guid>
+      <description>Preface Collection of my favorite vim settings taken from my vimrc.
+Line numbers Set both number and relativenumber to show the line number under the cursor as well as the distance of surrounding lines. However, this is only useful while in command mode, so an autocommand can be used to switch to only display absolute line numbers when entering insert mode or when switching to another buffer:
+set number set relativenumber &amp;quot; Show relative line numbers when in command mode or switching to another &amp;quot; buffer, and show absolute line numbers when in insert mode.</description>
+    </item>
+    
+    <item>
+      <title>Favorite Vim Settings</title>
+      <link>https://mandreyel.github.io/posts/fav-vim-settings/</link>
+      <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
+      
+      <guid>https://mandreyel.github.io/posts/fav-vim-settings/</guid>
+      <description>Preface Collection of my favorite vim settings taken from my vimrc.
+Line numbers Set both number and relativenumber to show the line number under the cursor as well as the distance of surrounding lines. However, this is only useful while in command mode, so an autocommand can be used to switch to only display absolute line numbers when entering insert mode or when switching to another buffer:
+set number set relativenumber &amp;quot; Show relative line numbers when in command mode or switching to another &amp;quot; buffer, and show absolute line numbers when in insert mode.</description>
+    </item>
+    
+  </channel>
+</rss>
