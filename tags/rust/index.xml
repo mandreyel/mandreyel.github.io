@@ -2,32 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Rust on mandreyel&#39;s blog</title>
-    <link>https://mandreyel.github.io/tags/rust/</link>
+    <link>/tags/rust/</link>
     <description>Recent content in Rust on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 15 Sep 2018 23:47:55 +0200</lastBuildDate>
     
-	<atom:link href="https://mandreyel.github.io/tags/rust/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/rust/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Servo Internals: Loading Pages</title>
-      <link>https://mandreyel.github.io/post/servo-internals-load-url/</link>
+      <link>/post/servo-internals-load-url/</link>
       <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
       
-      <guid>https://mandreyel.github.io/post/servo-internals-load-url/</guid>
-      <description>Disclaimer This blog post is part of a series I&amp;rsquo;m doing on Servo. All of it is still heavily work-in-progress. Some details may be missing or incorrect.
-Starting points There are currently four ways in which a URL may be loaded:
- the first time the browser is opened (when a new top-level browsing context is created); when the user clicks on a link or a script navigates the page (both are handled by the script thread); when the user types a URL (this is handled by the compositor); and finally the WebDriver can also initiate URL loads.</description>
-    </item>
-    
-    <item>
-      <title>Servo Internals: Loading Pages</title>
-      <link>https://mandreyel.github.io/posts/servo-internals-load-url/</link>
-      <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
-      
-      <guid>https://mandreyel.github.io/posts/servo-internals-load-url/</guid>
+      <guid>/post/servo-internals-load-url/</guid>
       <description>Disclaimer This blog post is part of a series I&amp;rsquo;m doing on Servo. All of it is still heavily work-in-progress. Some details may be missing or incorrect.
 Starting points There are currently four ways in which a URL may be loaded:
  the first time the browser is opened (when a new top-level browsing context is created); when the user clicks on a link or a script navigates the page (both are handled by the script thread); when the user types a URL (this is handled by the compositor); and finally the WebDriver can also initiate URL loads.</description>

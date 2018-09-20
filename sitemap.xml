@@ -3,78 +3,57 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://mandreyel.github.io/post/fav-vim-settings/</loc>
+    <loc>/post/fav-vim-settings/</loc>
     <lastmod>2018-09-20T21:49:45+02:00</lastmod>
   </url>
   
   <url>
-    <loc>https://mandreyel.github.io/posts/fav-vim-settings/</loc>
-    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/post/servo-internals-load-url/</loc>
+    <loc>/post/servo-internals-load-url/</loc>
     <lastmod>2018-09-15T23:47:55+02:00</lastmod>
   </url>
   
   <url>
-    <loc>https://mandreyel.github.io/posts/servo-internals-load-url/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/post/servo-internals/</loc>
+    <loc>/post/servo-internals/</loc>
     <lastmod>2018-09-15T23:44:50+02:00</lastmod>
   </url>
   
   <url>
-    <loc>https://mandreyel.github.io/posts/servo-internals/</loc>
-    <lastmod>2018-09-15T23:44:50+02:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/categories/</loc>
+    <loc>/categories/</loc>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://mandreyel.github.io/post/</loc>
+    <loc>/post/</loc>
     <lastmod>2018-09-20T21:49:45+02:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://mandreyel.github.io/posts/</loc>
+    <loc>/tags/rust/</loc>
+    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/servo/</loc>
+    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/vim/</loc>
     <lastmod>2018-09-20T21:49:45+02:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://mandreyel.github.io/tags/rust/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/tags/servo/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/tags/</loc>
-    <lastmod>2018-09-15T23:47:55+02:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/tags/vim/</loc>
-    <lastmod>2018-09-20T21:49:45+02:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://mandreyel.github.io/</loc>
+    <loc>/</loc>
     <lastmod>2018-09-20T21:49:45+02:00</lastmod>
     <priority>0</priority>
   </url>
