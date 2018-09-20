@@ -147,17 +147,15 @@ page is spawned.</p>
 
 <p>The compositor sends the constellation a <code>CompositorMsg::NewBrowser</code> message,
 which includes the URL and the ID for the to-be-created top-level browsing
-context.
-This message is handled by
-<code>Constellation::handle_new_top_level_browsing_context</code>, which sets up fields
-like the window size, the <code>LoadData</code> instance (which besides the URL includes
-other metadata, like the HTTP headers, data, referrer policy, referrer URL, and
-others), the <code>PipelineId</code> for the <code>Pipeline</code> of this page, among others.
-Then, it proceeds to create this pipeline by calling
-<code>Constellation::new_pipeline</code> and also creates a <code>SessionHistoryChange</code> with
-<code>Constellation::add_pending_change</code>. But before delving into these two
-functions, let&rsquo;s first examine the other major case that leads to calling the
-same two functions.</p>
+context. This message is handled by <code>Constellation</code> with
+<code>handle_new_top_level_browsing_context</code>, which sets up fields like the window
+size, the <code>LoadData</code> instance (which besides the URL includes other metadata,
+like the HTTP headers, data, referrer policy, referrer URL, and others), the
+<code>PipelineId</code> for the <code>Pipeline</code> of this page, among others.  Then, it proceeds
+to create this pipeline by calling <code>Constellation::new_pipeline</code> and also
+creates a <code>SessionHistoryChange</code> with <code>Constellation::add_pending_change</code>.  But
+before delving into these two functions, let&rsquo;s first examine the other major
+case that leads to calling the same two functions.</p>
 
 <h3 id="ii-fromscriptmsg-fromcompositor-webdrivercommandmsg-loadurl">II. {FromScriptMsg, FromCompositor, WebDriverCommandMsg}::LoadUrl</h3>
 
@@ -187,9 +185,8 @@ is, it is the iframe&rsquo;s browsing context&rsquo;s parent, as reflected by
 <code>BrowsingContext::parent_pipeline_id</code>). This is handled by
 <code>ScriptThread::handle_navigate</code>, which first looks for the iframe this load
 targets among <code>ScriptThread::documents</code>, where all documents handled by this
-<code>ScriptThread</code> are stored, and issues
-<code>HTMLIFrameElement::navigate_or_reload_child_browsing_context</code> on the iframe
-instance.</p>
+<code>ScriptThread</code> are stored, and calls <code>navigate_or_reload_child_browsing_context</code>
+on the <code>HTMLIFrameElement</code> instance.</p>
 
 <p>This method is invoked with the argument <code>NavigationType::Regular</code>. This is
 important because there are two cases when loading a page in an iframe: the
@@ -336,7 +333,8 @@ then passed to one of <code>FetchTaskTarget</code> sender&rsquo;s <code>process_
 <code>process_response_eof</code>, <code>process_request_body</code>, or <code>process_request_eof</code>
 methods. Each method sends a <code>FetchResponseMsg</code> message to the <code>Constellation</code>,
 which without any processing at all forwards it to <code>ScriptThread</code> wrapped in a
-<code>ConstellationControlMsg::NavigationResponse(PipelineId, FetchResponseMsg)</code>.</p>
+<code>ConstellationControlMsg::NavigationResponse</code> with arguments of types
+<code>PipelineId</code> and <code>FetchResponseMsg</code>.</p>
 
 <p>Let&rsquo;s see how each of them is handled by script:</p>
 
@@ -364,7 +362,7 @@ important in our case is the <code>ScriptMsg::ActivateDocument</code> message se
 
 <h4 id="applying-session-history-change">Applying session history change</h4>
 
-<p><code>Constellation::handle_activate_document_msg</code> is invoked on the other side of
+<p><code>Constellation</code>&rsquo;s <code>handle_activate_document_msg</code> is invoked on the other side of
 the channel. If the load is targeting an iframe, the iframe&rsquo;s parent pipeline is
 notified that the document changed. Then, <code>change_session_history</code> is invoked.
 If the currently focused pipeline is the same as, or the child of the one where
@@ -490,27 +488,29 @@ here, too, we end up in <code>do_parse_sync</code>.</p>
 <code>finish</code> member is invoked, which sets the document&rsquo;s read state to interactive,
 clears the document&rsquo;s parser, and invokes <code>Document::finish_load</code>. Unless the
 document loader is blocked (TODO what does this mean?), the same way as above,
-<code>ScriptThread::mark_document_with_no_blocked_loads</code> is invoked, which is a
+<code>ScriptThread</code>&rsquo;s <code>mark_document_with_no_blocked_loads</code> is invoked, which is a
 static function and merely inserts this document into
-<code>ScriptThread::docs_with_no_blocking_loads</code>.</p>
+<code>docs_with_no_blocking_loads</code>.</p>
 
 <p>The interesting thing is that the document is not immediately finalized, because
 there may be other events the script thread need process first. The event loop
 is run in <code>ScriptThread::start</code>, continuously invoking <code>handle_msgs</code> until
 shutdown. This does a bunch of things not (directly) related to this blog post
 right now, so I&rsquo;m skipping over to the part where this <code>Document</code> and
-potentially others are dequeued from <code>ScriptThread::docs_with_no_blocking_loads</code>
-and <code>Document::maybe_queue_document_completion</code> method is invoked on them. This
-again does a whole host of things, but the important bits are that the document
-state is set to complete (<code>DocumentReadyState::Complete</code>), the window is
-reflowed and scrolled to a fragment if present in the URL, and the constellation
-is notified of the document load, via <code>ScriptMsg::LoadComplete</code>.</p>
+potentially others are dequeued from <code>ScriptThread</code>&rsquo;s
+<code>docs_with_no_blocking_loads</code> and <code>maybe_queue_document_completion</code> method is
+invoked on each <code>Document</code> instance. This again does a whole host of things, but
+the important bits are that the document state is set to complete
+(<code>DocumentReadyState::Complete</code>), the window is reflowed and scrolled to a
+fragment if present in the URL, and the constellation is notified of the
+document load, via <code>ScriptMsg::LoadComplete</code>.</p>
 
-<p>This is received by <code>Constellation::handle_load_complete_msg</code>. If the load
+<p><code>Constellation</code> handles this with <code>handle_load_complete_msg</code>. If the load
 occurred in a top-level browsing context, the embedder is notified that its
-document finished loading. Otherwise it&rsquo;s an iframe and <code>handle_subframe_loaded</code>
-is called. This sends a <code>ConstellationControlMsg::DispatchIFrameLoadEvent</code> to
-iframe&rsquo;s parent pipeline&rsquo;s event loop.</p>
+document finished loading.  Otherwise it&rsquo;s an iframe and
+<code>handle_subframe_loaded</code> is called. This sends a
+<code>ConstellationControlMsg::DispatchIFrameLoadEvent</code> to iframe&rsquo;s parent pipeline&rsquo;s
+event loop.</p>
 
 <p><code>ScriptThread::handle_iframe_load_event</code> takes over, and finds the iframe&rsquo;s
 encompassing <code>Document</code>, then the <code>HTMLIFrameElement</code> itself and invokes
