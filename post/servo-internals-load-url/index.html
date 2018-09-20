@@ -26,9 +26,9 @@
 
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Servo Internals: Loading Pages :: mandreyel&#39;s blog — thoughts on stuff" />
-<meta name="twitter:description" content="Disclaimer This blog post is part of a series I&amp;rsquo;m doing on Servo. All of it is still heavily work-in-progress. Some details may be missing or incorrect.
-Starting points There are currently four ways in which a URL may be loaded:
- the first time the browser is opened (when a new top-level browsing context is created); when the user clicks on a link or a script navigates the page (both are handled by the script thread); when the user types a URL (this is handled by the compositor); and finally the WebDriver can also initiate URL loads." />
+<meta name="twitter:description" content="This blog post is part of a series I&amp;rsquo;m doing on Servo. It&amp;rsquo;s a deep dive into how Servo loads a page given a URL. Please note, though, that it is still heavily work-in-progress. Some details may be missing or incorrect.
+
+" />
 <meta name="twitter:site" content="" />
 <meta name="twitter:creator" content="" />
 <meta name="twitter:image" content="/img/default.jpg">
@@ -69,20 +69,6 @@ Starting points There are currently four ways in which a URL may be loaded:
 
     <span class="header__right">
       
-        <nav class="menu">
-  <ul class="menu__inner">
-    
-      <li><a href="/about">About</a></li>
-    
-  </ul>
-</nav>
-        <span class="menu-trigger">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M0 0h24v24H0z" fill="none"/>
-            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-          </svg>        
-        </span>
-      
       <span class="theme-toggle">
         <svg class="bulb-off" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="24" height="24"/>
@@ -109,7 +95,7 @@ Starting points There are currently four ways in which a URL may be loaded:
       <span class="post-date">
         2018-09-15
       </span>
-      <span class="post-author">Written by </span>
+      <span class="post-author">Written by mandreyel</span>
     </div>
 
     
@@ -125,14 +111,13 @@ Starting points There are currently four ways in which a URL may be loaded:
     
 
     <div class="post-content">
-      
-
-<h2 id="disclaimer">Disclaimer</h2>
-
-<p>This blog post is part of a
+      <p>This blog post is part of a
 <a href="https://mandreyel.github.io/posts/servo-internals/">series</a> I&rsquo;m doing on Servo.
-All of it is still heavily work-in-progress. Some details may be missing or
+It&rsquo;s a deep dive into how Servo loads a page given a URL.
+Please note, though, that it is still heavily work-in-progress. Some details may be missing or
 incorrect.</p>
+
+<p></p>
 
 <h2 id="starting-points">Starting points</h2>
 
@@ -544,7 +529,6 @@ terminates the <code>LoadBlocker</code> (TODO what&rsquo;s this?) and issues a w
 
 <p>As far as I can tell, these are most of the steps necessary to load a page in
 Servo.</p>
-
     </div>
     
       <div class="pagination">

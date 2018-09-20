@@ -17,9 +17,13 @@
       <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
       
       <guid>/post/servo-internals-load-url/</guid>
-      <description>Disclaimer This blog post is part of a series I&amp;rsquo;m doing on Servo. All of it is still heavily work-in-progress. Some details may be missing or incorrect.
-Starting points There are currently four ways in which a URL may be loaded:
- the first time the browser is opened (when a new top-level browsing context is created); when the user clicks on a link or a script navigates the page (both are handled by the script thread); when the user types a URL (this is handled by the compositor); and finally the WebDriver can also initiate URL loads.</description>
+      <description>&lt;p&gt;This blog post is part of a
+&lt;a href=&#34;https://mandreyel.github.io/posts/servo-internals/&#34;&gt;series&lt;/a&gt; I&amp;rsquo;m doing on Servo.
+It&amp;rsquo;s a deep dive into how Servo loads a page given a URL.
+Please note, though, that it is still heavily work-in-progress. Some details may be missing or
+incorrect.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
     </item>
     
   </channel>

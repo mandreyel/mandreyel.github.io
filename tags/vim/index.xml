@@ -17,9 +17,10 @@
       <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
       
       <guid>/post/fav-vim-settings/</guid>
-      <description>Preface Collection of my favorite vim settings taken from my vimrc.
-Line numbers Set both number and relativenumber to show the line number under the cursor as well as the distance of surrounding lines. However, this is only useful while in command mode, so an autocommand can be used to switch to only display absolute line numbers when entering insert mode or when switching to another buffer:
-set number set relativenumber &amp;quot; Show relative line numbers when in command mode or switching to another &amp;quot; buffer, and show absolute line numbers when in insert mode.</description>
+      <description>&lt;p&gt;A collection of my favorite vim settings taken from my
+&lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
     </item>
     
   </channel>
