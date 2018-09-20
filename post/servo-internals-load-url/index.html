@@ -139,7 +139,7 @@ which orchestrates most operations in Servo.</p>
 coalesce. Therefore I&rsquo;m only going to cover these two cases, and abstract away
 the minor differences.</p>
 
-<h3 id="new-top-level-browsing-context">New top-level browsing context</h3>
+<h3 id="i-new-top-level-browsing-context">I. New top-level browsing context</h3>
 
 <p>Let&rsquo;s examine the first case, when a page is loaded for the first time (that is,
 no browsing context exists), up until the point when the <code>Pipeline</code> for this
@@ -159,7 +159,7 @@ Then, it proceeds to create this pipeline by calling
 functions, let&rsquo;s first examine the other major case that leads to calling the
 same two functions.</p>
 
-<h3 id="fromscriptmsg-fromcompositor-webdrivercommandmsg-loadurl">{FromScriptMsg, FromCompositor, WebDriverCommandMsg}::LoadUrl</h3>
+<h3 id="ii-fromscriptmsg-fromcompositor-webdrivercommandmsg-loadurl">II. {FromScriptMsg, FromCompositor, WebDriverCommandMsg}::LoadUrl</h3>
 
 <p>In the second case&ndash;where either a typed URL, a click on a link (either by user
 or some script), or a WebDriver command initiates a page load&ndash;is all handled by
@@ -179,7 +179,7 @@ pipeline that initiated the load is located in an iframe (which is a nested
 browsing context), or it&rsquo;s in a top-level browsing context (i.e. a window or
 tab).</p>
 
-<h4 id="loading-url-in-an-iframe">Loading URL in an IFrame</h4>
+<h4 id="a-loading-a-url-in-an-iframe">a) Loading a URL in an IFrame</h4>
 
 <p>In the first case, the constellation sends a <code>ConstellationControlMsg::Navigate</code>
 message to the event loop of the pipeline that encapsulates this iframe (that
@@ -213,7 +213,7 @@ suggest. Instead, the load is merely <em>initiated</em>. Perhaps
 <code>ScriptInitiatedIFrameURLLoad</code> and <code>handle_script_iframe_url_load_start</code> would
 be less ambiguous names, but I&rsquo;m not sure.</p>
 
-<h4 id="loading-url-in-a-top-level-browsing-context">Loading URL in a top-level browsing context</h4>
+<h4 id="b-loading-a-url-in-a-top-level-browsing-context">b) Loading a URL in a top-level browsing context</h4>
 
 <p>In the second case, the code first makes sure that there is no other pending
 change for this browsing context. This is why trying to click on a link when
@@ -297,14 +297,13 @@ two classes with the same name, but this the one found inside the
 
 <h3 id="fetch">Fetch</h3>
 
-<p><code>Constellation</code> uses the <code>mspc</code> channel pairs, <code>network_listener_sender</code> and
+<p><code>Constellation</code> uses its <code>mspc</code> channel pairs, <code>network_listener_sender</code> and
 <code>network_listener_receiver</code>, to communicate with the asynchronous fetch
 operation. <code>NetworkListener::initiate_fetch</code> is passed
 <code>network_listener_sender</code>, which it routes through an IPC router. I&rsquo;m not 100%
-sure but I believe this is because the resource thread may choose to execute the
-fetch operation in another process, and therefore we need a uniform way to send
-messages between threads and/or processes, and as such the IPC router is used to
-handle this.</p>
+sure but I believe this is because the resource thread may be running in another
+process, and therefore we need a uniform way to send messages between threads
+and/or processes, and as such the IPC router is used to handle this.</p>
 
 <p>TODO could a <code>CoreResourceMsg::FetchRedirect</code> msg be sent as well in the case of
 <code>load_url</code>?</p>
@@ -316,12 +315,11 @@ with the request data and the IPC sender (routed to
 <code>CoreResourceManager::fetch</code> which spawns <em>yet another thread</em> and calls
 <code>fetch/methods.rs:fetch</code>.</p>
 
-<p>All of this is rather involved with lots of details (such as the CORS preflight
-fetch and many other steps)&ndash;and at the time of writing this post, unfinished&ndash;,
-so I&rsquo;m skipping a lot of it so as not to get swamped by the minutiae. For the
-purposes of this post the most interesting step is the <code>scheme_fetch</code> function,
-which depending on the URL scheme (&lsquo;data&rsquo;, &lsquo;http&rsquo;, &lsquo;about:blank&rsquo;, &lsquo;file&rsquo; etc)
-launches different fetch operations.</p>
+<p>All of this is rather involved with lots of details&ndash;and at the time of writing
+this, unfinished&ndash;, so I&rsquo;m skipping a lot of it so as not to get swamped by the
+minutiae. For the purposes of this post the most interesting step is the
+<code>scheme_fetch</code> function, which depending on the URL scheme (&lsquo;data&rsquo;, &lsquo;http&rsquo;,
+&lsquo;about:blank&rsquo;, &lsquo;file&rsquo; etc) launches different fetch operations.</p>
 
 <p>One thing worth expounding on that had initially confused me is that the
 <code>IpcSender</code> passed to the resource thread and then to <code>fetch/methods.rs:fetch</code>
@@ -333,18 +331,16 @@ but <code>FetchTaskTarget</code> is implemented for <code>IpcSender&lt;FetchResp
 <code>net_traits/lib.rs</code>. This is how the fetch responses are communicated to
 <code>Constellation</code>.</p>
 
-<p>Back to fetch, the scheme type is in fact not important for our purposes now, as
-the specific fetch implementations all return a <code>Response</code> instance, which is
-then passed to the sender (named <code>target</code>, presumably due to <code>FetchTaskTarget</code>)
-and at various points the <code>process_response</code>, <code>process_response_eof</code>,
-<code>process_request_body</code>, and <code>process_request_eof</code> <code>FetchTaskTarget</code> trait
-methods are invoked. Each method sends a <code>FetchResponseMsg</code> message of the same
-name as the trait method (but in CamelCase) to the <code>Constellation</code>, which
-without any processing at all forwards it to <code>ScriptThread</code> wrapped in a
-<code>ConstellationControlMsg::NavigationResponse(PipelineId, FetchResponseMsg)</code>.
-Let&rsquo;s see how each of them is handled by script:</p>
+<p>Back to fetch, the scheme fetch function returns a <code>Response</code> instance, which is
+then passed to one of <code>FetchTaskTarget</code> sender&rsquo;s <code>process_response</code>,
+<code>process_response_eof</code>, <code>process_request_body</code>, or <code>process_request_eof</code>
+methods. Each method sends a <code>FetchResponseMsg</code> message to the <code>Constellation</code>,
+which without any processing at all forwards it to <code>ScriptThread</code> wrapped in a
+<code>ConstellationControlMsg::NavigationResponse(PipelineId, FetchResponseMsg)</code>.</p>
 
-<h4 id="processresponse">ProcessResponse</h4>
+<p>Let&rsquo;s see how each of them is handled by script:</p>
+
+<h3 id="processresponse">&gt; ProcessResponse</h3>
 
 <p><code>ScriptThread::handle_fetch_metadata</code> finds the <code>ParserContext</code> for this
 <code>Pipeline</code> and invokes <code>ParserContext::process_response</code>. This is the
@@ -366,7 +362,7 @@ a document. It defines bindings, sets up the <code>Window</code>, <code>WindowPr
 important in our case is the <code>ScriptMsg::ActivateDocument</code> message sent to the
 <code>Constellation</code>.</p>
 
-<h5 id="applying-session-history-change">Applying session history change</h5>
+<h4 id="applying-session-history-change">Applying session history change</h4>
 
 <p><code>Constellation::handle_activate_document_msg</code> is invoked on the other side of
 the channel. If the load is targeting an iframe, the iframe&rsquo;s parent pipeline is
@@ -375,7 +371,7 @@ If the currently focused pipeline is the same as, or the child of the one where
 the load is occurring, the focused pipeline is changed to the one which is
 loading the page.</p>
 
-<h6 id="new-browsing-context">New browsing context</h6>
+<h4 id="a-new-browsing-context">a) New browsing context</h4>
 
 <p>If this load is the very first pipeline for its browsing context (i.e. in a new
 window or iframe), then that browsing context does not exist yet and is created
@@ -394,7 +390,7 @@ also set after <code>new_browsing_context</code>.</p>
 A notification is sent to embedder that the browsing context&rsquo;s history has
 changed.</p>
 
-<h6 id="existing-browsing-context">Existing browsing context</h6>
+<h4 id="b-existing-browsing-context">b) Existing browsing context</h4>
 
 <p>If on the other hand the load is happening in an existing browsing context, the
 new pipeline is inserted in the browsing context&rsquo;s session history entries
@@ -456,9 +452,9 @@ removes the pipeline from <code>Constellation::pipelines</code>.</p>
 
 <h5 id="trimming-the-history">Trimming the history</h5>
 
-<p>Finally, if this load is in an existing browsing context, the session history is
-trimmed for the <em>top-level browsing context</em>, that is, <em>the entire frame tree</em>,
-with <code>trim_history</code>.</p>
+<p>Finally, since this load is in an existing browsing context, by calling
+<code>trim_history</code> the session history is trimmed for the <em>top-level browsing
+context</em> of the pipeline handling this load, that is, <em>its entire frame tree</em>.</p>
 
 <p>This is rather straight forward. The maximum number of loaded pipelines that may
 stay in memory is retrieved from the preferences (&ldquo;session-history.max-length&rdquo;)
@@ -475,7 +471,7 @@ invoked twice in both cases&ndash;once above in each case, and once after the
 browsing context of the session change, which sends the frame tree to the
 compositor (i.e. embedder).</p>
 
-<h4 id="processresponsechunk">ProcessResponseChunk</h4>
+<h3 id="processresponsechunk">&gt; ProcessResponseChunk</h3>
 
 <p><code>ScriptThread::handle_fetch_chunk</code>, as <code>handle_fetch_metadata</code> above, finds the
 <code>ParserContext</code> for this <code>Pipeline</code> and invokes
@@ -484,7 +480,7 @@ compositor (i.e. embedder).</p>
 response body was received, <code>ParserContext::finish</code> is invoked.  Otherwise, we
 wait for more chunks or an explicit EOF signal.</p>
 
-<h4 id="processresponseeof">ProcessResponseEOF</h4>
+<h3 id="processresponseeof">&gt; ProcessResponseEOF</h3>
 
 <p><code>ScriptThread::handle_fetch_eof</code>, like the previous two, finds the
 <code>ParserContext</code> for this <code>Pipeline</code> and invokes <code>process_response_eof</code>, and
@@ -521,7 +517,7 @@ encompassing <code>Document</code>, then the <code>HTMLIFrameElement</code> itse
 <code>iframe_load_event_steps</code> on it. This fires the load event for the iframe,
 terminates the <code>LoadBlocker</code> (TODO what&rsquo;s this?) and issues a window reflow.</p>
 
-<h4 id="processrequestbody-and-processrequesteof">ProcessRequestBody and ProcessRequestEOF</h4>
+<h3 id="processrequestbody-and-processrequesteof">&gt; ProcessRequestBody and ProcessRequestEOF</h3>
 
 <p>These are not implemented at the time of this post&rsquo;s writing.</p>
 
