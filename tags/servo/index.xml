@@ -33,13 +33,10 @@ be missing or incorrect.&lt;/p&gt;
       
       <guid>/post/servo-internals/</guid>
       <description>&lt;p&gt;I recently started contributing to Mozilla&amp;rsquo;s
-&lt;a href=&#34;https://github.com/servo/servo&#34;&gt;Servo&lt;/a&gt;, a new browser engine experiment,
-eventually intended to be merged into Firefox.&lt;/p&gt;
-
-&lt;p&gt;I take a lot of notes as I walk through the code base (it&amp;rsquo;s quite vast&amp;ndash;at the
-time of writing the Rust portions alone are 1.5M CLOC), and I thought I&amp;rsquo;d put
-them online, primarily for myself as future reference, but also in hopes that it
-may be useful for others starting out.&lt;/p&gt;
+  &lt;a href=&#34;https://github.com/servo/servo&#34;&gt;Servo&lt;/a&gt;, and I take a lot of notes while
+  walking through the code base. I decided to furnish them with explanations and
+  put them online&amp;ndash;primarily for myself as future reference, but also in hopes
+  that it may be useful for others.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;</description>
     </item>
