@@ -148,22 +148,24 @@ page is spawned.</p>
 <p>The compositor sends the constellation a <code>CompositorMsg::NewBrowser</code> message,
 which includes the URL and the ID for the to-be-created top-level browsing
 context. This message is handled by <code>Constellation</code> with
-<code>handle_new_top_level_browsing_context</code>, which sets up fields like the window
-size, the <code>LoadData</code> instance (which besides the URL includes other metadata,
-like the HTTP headers, data, referrer policy, referrer URL, and others), the
-<code>PipelineId</code> for the <code>Pipeline</code> of this page, among others.  Then, it proceeds
-to create this pipeline by calling <code>Constellation::new_pipeline</code> and also
-creates a <code>SessionHistoryChange</code> with <code>Constellation::add_pending_change</code>.  But
-before delving into these two functions, let&rsquo;s first examine the other major
-case that leads to calling the same two functions.</p>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L1632"><code>handle_new_top_level_browsing_context</code></a>,
+which sets up fields like the window size, the <code>LoadData</code> instance (which
+besides the URL includes other metadata, like the HTTP headers, data, referrer
+policy, referrer URL, and others), the <code>PipelineId</code> for the <code>Pipeline</code> of this
+page, among others.  Then, it proceeds to create this pipeline by calling
+<code>Constellation::new_pipeline</code> and also creates a <code>SessionHistoryChange</code> with
+<code>Constellation::add_pending_change</code>.  But before delving into these two
+functions, let&rsquo;s first examine the other major case that leads to calling the
+same two functions.</p>
 
 <h3 id="ii-fromscriptmsg-fromcompositor-webdrivercommandmsg-loadurl">II. {FromScriptMsg, FromCompositor, WebDriverCommandMsg}::LoadUrl</h3>
 
 <p>In the second case&ndash;where either a typed URL, a click on a link (either by user
 or some script), or a WebDriver command initiates a page load&ndash;is all handled by
-calling <code>Constellation::load_url</code> (though in the case of WebDriver there are
-a few extra steps preceding this, but they are irrelevant for understanding the
-larger picture).</p>
+calling
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L2035"><code>Constellation::load_url</code></a>
+(though in the case of WebDriver there are a few extra steps preceding this, but
+they are irrelevant for understanding the larger picture).</p>
 
 <h4 id="the-browsing-context-must-exist">The browsing context must exist</h4>
 
@@ -183,9 +185,11 @@ tab).</p>
 message to the event loop of the pipeline that encapsulates this iframe (that
 is, it is the iframe&rsquo;s browsing context&rsquo;s parent, as reflected by
 <code>BrowsingContext::parent_pipeline_id</code>). This is handled by
-<code>ScriptThread::handle_navigate</code>, which first looks for the iframe this load
-targets among <code>ScriptThread::documents</code>, where all documents handled by this
-<code>ScriptThread</code> are stored, and calls <code>navigate_or_reload_child_browsing_context</code>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L2897"><code>ScriptThread::handle_navigate</code></a>,
+which first looks for the iframe this load targets among
+<code>ScriptThread::documents</code>, where all documents handled by this <code>ScriptThread</code>
+are stored, and calls
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/htmliframeelement.rs#L103"><code>navigate_or_reload_child_browsing_context</code></a>
 on the <code>HTMLIFrameElement</code> instance.</p>
 
 <p>This method is invoked with the argument <code>NavigationType::Regular</code>. This is
@@ -198,11 +202,12 @@ this method, after setting up some data, sends a
 <code>ScriptMsg::ScriptLoadedURLInIFrame</code> to <code>Constellation</code>.</p>
 
 <p>This in turn is handled by
-<code>Constellation::handle_script_loaded_url_in_iframe_msg</code>, which spawns a new
-<code>Pipeline</code> for the iframe&rsquo;s browsing context with <code>Constellation::new_pipeline</code>,
-inheriting the properties (such as private browsing mode, visibility, and others
-from the existing browsing context), and as above, a <code>SessionHistoryChange</code> is
-created via <code>Constellation::add_pending_change</code>.</p>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L1755"><code>Constellation::handle_script_loaded_url_in_iframe_msg</code></a>,
+which spawns a new <code>Pipeline</code> for the iframe&rsquo;s browsing context with
+<code>Constellation::new_pipeline</code>, inheriting the properties (such as private
+browsing mode, visibility, and others from the existing browsing context), and
+as above, a <code>SessionHistoryChange</code> is created via
+<code>Constellation::add_pending_change</code>.</p>
 
 <p>It&rsquo;s perhaps important to point out that at this point the page the URL is
 referring to isn&rsquo;t actually loaded, as perhaps the &ldquo;loaded URL&rdquo; names may
@@ -237,38 +242,46 @@ creating the <code>Pipeline</code> and <code>SessionHistoryChange</code> objects
 <code>handle_script_loaded_url_in_iframe_msg</code>, and <code>load_url</code>) conclude in these two
 steps.</p>
 
-<p>The <code>new_pipeline</code> method contains steps to spawn a new <code>Pipeline</code>, whose logic
-mostly consists of choosing an existing <code>EventLoop</code> (which is basically an
-<code>IpcSender</code> to a <code>Pipeline</code>&rsquo;s <code>ScriptThread</code>) if this load is not sandboxed and
-has an opener or parent <code>Pipeline</code>, and is either an <code>about:blank</code> load or the
-URL for the new page shares the same host with an existing event loop.
-Otherwise this event loop will be <code>None</code> if none of these conditions are
-fulfilled.</p>
+<p>The
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L677"><code>new_pipeline</code></a>
+method contains steps to spawn a new <code>Pipeline</code>, whose logic mostly consists of
+choosing an existing <code>EventLoop</code> (which is basically an <code>IpcSender</code> to a
+<code>Pipeline</code>&rsquo;s <code>ScriptThread</code>) if this load is not sandboxed and has an opener or
+parent <code>Pipeline</code>, and is either an <code>about:blank</code> load or the URL for the new
+page shares the same host with an existing event loop.  Otherwise this event
+loop will be <code>None</code> if none of these conditions are fulfilled.</p>
 
-<p>Then, <code>Pipeline::spawn</code> is invoked with this optional <code>EventLoop</code>, many fields
-from <code>Constellation</code>, and a bunch of load specific arguments passed to
-<code>new_pipeline</code> (like the browsing context and pipeline IDs, whether the page was
-loaded in private browsing mode, the <code>LoadData</code>, and others&ndash;best to look at the
-relevant code for details). More details follow in a bit.</p>
+<p>Then,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/pipeline.rs#L184"><code>Pipeline::spawn</code></a>
+is invoked with this optional <code>EventLoop</code>, many fields from <code>Constellation</code>, and
+a bunch of load specific arguments passed to <code>new_pipeline</code> (like the browsing
+context and pipeline IDs, whether the page was loaded in private browsing mode,
+the <code>LoadData</code>, and others&ndash;best to look at the relevant code for details). More
+details follow in a bit.</p>
 
-<p>In each of the two cases, <code>Constellation::add_pending_change</code> is called to add
-a <code>SessionHistoryChange</code> object to the <code>Constellation::pending_changes</code> hash
-map, which is used to later retrieve information about this load when the
-document becomes active. This is necessary because a page load is asynchronous
-and we need a way to maintain state until a message from script thread
-indicating traversal maturation is received. Among others, this object holds a
-<code>NewBrowsingContextInfo</code> field wrapped in an <code>Option</code>, which is used to indicate
-that the pending change introduces a new browsing context (used in the case of
-creating a new top-level browsing context or new iframes, which is not covered
-here), or <code>None</code> if the page load was kicked off in an existing browsing
-context.</p>
+<p>In each of the two cases,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L858"><code>Constellation::add_pending_change</code></a>
+is called to add a <code>SessionHistoryChange</code> object to the
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L290"><code>Constellation::pending_changes</code></a>
+hash map, which is used to later retrieve information about this load when the
+<code>Constellation::pending_changes</code> document becomes active.  This is necessary
+because a page load is asynchronous and we need a way to maintain state until a
+message from script thread indicating traversal maturation is received. Among
+others, this object holds a
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/browsingcontext.rs#L17"><code>NewBrowsingContextInfo</code></a>
+field wrapped in an <code>Option</code>, which is used to indicate that the pending change
+introduces a new browsing context (used in the case of creating a new top-level
+browsing context or new iframes, which is not covered here), or <code>None</code> if the
+page load was kicked off in an existing browsing context.</p>
 
 <h3 id="pipeline">Pipeline</h3>
 
-<p>A <code>Pipeline</code> is not in itself an entity that really does anything. Instead, it
-is used to hold everything that&rsquo;s needed to produce a web page and run its
-JavaScript event loop. More broadly speaking, it acts as a document&rsquo;s frontend
-for <code>Constellation</code>.</p>
+<p>A
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/pipeline.rs#L51"><code>Pipeline</code></a>
+is not in itself an entity that really does anything. Instead, it is used to
+hold everything that&rsquo;s needed to produce a web page and run its JavaScript event
+loop. More broadly speaking, it acts as a document&rsquo;s frontend for
+<code>Constellation</code>.</p>
 
 <p>Each <code>Pipeline</code> has an event loop and a layout thread. Multiple <code>Pipeline</code>s may
 share the same event loop (<code>ScriptThread</code>) if their document shares the same
@@ -287,25 +300,30 @@ the pipeline is spawned as such, or <code>UnprivilegedPipelineContent::start_all
 called, which starts the layout and script threads (with <code>LayoutThread::create</code>
 and <code>ScriptThread::create</code>, respectively). TODO expand on multiprocess</p>
 
-<p><code>ScriptThread::create</code> spawns a new thread on which the event loop will be run.
-But before starting the event loop, <code>ScriptThread::pre_page_load</code> is invoked,
-which sets up the request and sends a <code>ScriptMsg::InitiateNavigateRequest</code> to
-<code>Constellation</code>.</p>
+<p><a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L628-L631"><code>ScriptThread::create</code></a>
+spawns a new thread on which the event loop will be run.  But before starting
+the event loop,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L3012"><code>ScriptThread::pre_page_load</code></a>
+is invoked, which sets up the request and sends a
+<code>ScriptMsg::InitiateNavigateRequest</code> to <code>Constellation</code>.</p>
 
-<p>This then is handled by <code>Constellation::handle_navigate_request</code>, which sets ups
-a <code>NetworkListener</code> and invokes <code>initiate_fetch</code> on it. Confusingly, there are
-two classes with the same name, but this the one found inside the
-<code>constellation</code> folder.</p>
+<p>This then is handled by
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L1735"><code>Constellation::handle_navigate_request</code></a>,
+which sets ups a <code>NetworkListener</code> and invokes
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/network_listener.rs#L46"><code>initiate_fetch</code></a>
+on it. Confusingly, there are two classes with the same name, but this the one
+found inside the <code>constellation</code> folder.</p>
 
 <h3 id="fetch">Fetch</h3>
 
-<p><code>Constellation</code> uses its <code>mspc</code> channel pairs, <code>network_listener_sender</code> and
-<code>network_listener_receiver</code>, to communicate with the asynchronous fetch
-operation. <code>NetworkListener::initiate_fetch</code> is passed
-<code>network_listener_sender</code>, which it routes through an IPC router. I&rsquo;m not 100%
-sure but I believe this is because the resource thread may be running in another
-process, and therefore we need a uniform way to send messages between threads
-and/or processes, and as such the IPC router is used to handle this.</p>
+<p><code>Constellation</code> uses its <code>mspc</code> channel pairs, <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L189-L192"><code>network_listener_sender</code> and
+<code>network_listener_receiver</code></a>,
+to communicate with the asynchronous fetch operation.
+<code>NetworkListener::initiate_fetch</code> is passed <code>network_listener_sender</code>, which it
+routes through an IPC router. I&rsquo;m not 100% sure but I believe this is because
+the resource thread may be running in another process, and therefore we need a
+uniform way to send messages between threads and/or processes, and as such the
+IPC router is used to handle this.</p>
 
 <p>TODO could a <code>CoreResourceMsg::FetchRedirect</code> msg be sent as well in the case of
 <code>load_url</code>?</p>
@@ -315,7 +333,7 @@ and/or processes, and as such the IPC router is used to handle this.</p>
 with the request data and the IPC sender (routed to
 <code>Constellation::network_listener_receiver</code>). This message is processed by
 <code>CoreResourceManager::fetch</code> which spawns <em>yet another thread</em> and calls
-<code>fetch/methods.rs:fetch</code>.</p>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/net/fetch/methods.rs#L86"><code>fetch/methods.rs:fetch</code></a>.</p>
 
 <p>All of this is rather involved with lots of details&ndash;and at the time of writing
 this, unfinished&ndash;, so I&rsquo;m skipping a lot of it so as not to get swamped by the
@@ -325,13 +343,17 @@ minutiae. For the purposes of this post the most interesting step is the
 
 <p>One thing worth expounding on that had initially confused me is that the
 <code>IpcSender</code> passed to the resource thread and then to <code>fetch/methods.rs:fetch</code>
-is subsequently treated as a type implementing the <code>FetchTaskTarget</code> and <code>Send</code>
-traits. <code>FetchTaskTarget</code> defines the following methods: <code>process_response</code>,
+is subsequently treated as a type implementing the
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/net_traits/lib.rs#L162"><code>FetchTaskTarget</code></a>
+and <code>Send</code> traits.</p>
+
+<p><code>FetchTaskTarget</code> defines the following methods: <code>process_response</code>,
 <code>process_response_eof</code>, <code>process_request_body</code>, and <code>process_request_eof</code>.
 <code>IpcSender</code> is <code>Send</code> by default (meaning it&rsquo;s safe to be sent across channels),
-but <code>FetchTaskTarget</code> is implemented for <code>IpcSender&lt;FetchResponseMsg&gt;</code> in
-<code>net_traits/lib.rs</code>. This is how the fetch responses are communicated to
-<code>Constellation</code>.</p>
+but <code>FetchTaskTarget</code> is
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/net_traits/lib.rs#L212">implemented</a>
+for <code>IpcSender&lt;FetchResponseMsg&gt;</code> in <code>net_traits/lib.rs</code>. This is how the fetch
+  responses are communicated to <code>Constellation</code>.</p>
 
 <p>Back to fetch, the scheme fetch function returns a <code>Response</code> instance, which is
 then passed to one of <code>FetchTaskTarget</code> sender&rsquo;s <code>process_response</code>,
@@ -345,34 +367,48 @@ which without any processing at all forwards it to <code>ScriptThread</code> wra
 
 <h3 id="processresponse">&gt; ProcessResponse</h3>
 
-<p><code>ScriptThread::handle_fetch_metadata</code> finds the <code>ParserContext</code> for this
-<code>Pipeline</code> and invokes <code>ParserContext::process_response</code>. This is the
-<code>ParserContext</code> in <code>script_thread/dom/servoparser/mod.rs</code>.</p>
+<p><a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L3045"><code>ScriptThread::handle_fetch_metadata</code></a>
+finds the <code>ParserContext</code> for this <code>Pipeline</code> and invokes
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/servoparser/mod.rs#L676"><code>ParserContext::process_response</code></a>.
+This is the <code>ParserContext</code> in <code>script_thread/dom/servoparser/mod.rs</code>.</p>
 
 <p>So this part is a bit weird: since each thread only runs a single
-<code>ScriptThread</code>, a pointer to the instance is set in a file global thread local
-variable. I&rsquo;m guessing this is so that methods outside <code>ScriptThread</code> (like the
-parser) need not be passed a reference to the actual <code>ScriptThread</code>, which would
-couple code more tightly and probably mess with the borrow-checker as well. This
-allows <code>process_response</code> to invoke the static method
-<code>ScriptThread::page_headers_available</code>, which retrieves a reference to the
-<code>ScriptThread</code> instance running on this thread, and invokes
-<code>handle_page_headers_available</code> on it.</p>
+<code>ScriptThread</code>, a pointer to the instance is
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L653-L655">set</a>
+in a file global <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L138">thread local
+variable</a>.
+I&rsquo;m guessing this is so that methods outside <code>ScriptThread</code> (like the parser)
+need not be passed a reference to the actual <code>ScriptThread</code>, which would couple
+code more tightly and probably mess with the borrow-checker as well. This allows
+<code>process_response</code> to invoke the static method
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L764"><code>ScriptThread::page_headers_available</code></a>,
+which retrieves a reference to the <code>ScriptThread</code> instance running on this
+thread, and invokes
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L2053"><code>handle_page_headers_available</code></a>
+on it.</p>
 
-<p>Then, <code>ScriptThread::load</code> is invoked, which is the entry point to loading
-a document. It defines bindings, sets up the <code>Window</code>, <code>WindowProxy</code>, and
-<code>Document</code>, starts HTML and CSS parsing, and kicks off the initial layout. Most
-important in our case is the <code>ScriptMsg::ActivateDocument</code> message sent to the
+<p>Then,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L2514"><code>ScriptThread::load</code></a>
+is invoked, which is the entry point to loading a document. It defines bindings,
+sets up the
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/window.rs#L171"><code>Window</code></a>,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/windowproxy.rs#L58"><code>WindowProx[</code>Window<code>]y</code></a>,
+and
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/document.rs#L253"><code>Document</code></a>,
+starts HTML and CSS parsing, and kicks off the initial layout.  Most important
+in our case is the <code>ScriptMsg::ActivateDocument</code> message sent to the
 <code>Constellation</code>.</p>
 
 <h4 id="applying-session-history-change">Applying session history change</h4>
 
-<p><code>Constellation</code>&rsquo;s <code>handle_activate_document_msg</code> is invoked on the other side of
-the channel. If the load is targeting an iframe, the iframe&rsquo;s parent pipeline is
-notified that the document changed. Then, <code>change_session_history</code> is invoked.
-If the currently focused pipeline is the same as, or the child of the one where
-the load is occurring, the focused pipeline is changed to the one which is
-loading the page.</p>
+<p><code>Constellation</code>&rsquo;s
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L3308"><code>handle_activate_document_msg</code></a>
+is invoked on the other side of the channel. If the load is targeting an iframe,
+the iframe&rsquo;s parent pipeline is notified that the document changed. Then,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L3092"><code>change_session_history</code></a>
+is invoked.  If the currently focused pipeline is the same as, or the child
+<code>change_session_history</code> of the one where the load is occurring, the focused
+pipeline is changed to the one which is loading the page.</p>
 
 <h4 id="a-new-browsing-context">a) New browsing context</h4>
 
@@ -380,7 +416,10 @@ loading the page.</p>
 window or iframe), then that browsing context does not exist yet and is created
 now. Recall all the information pertaining to a load stored in
 <code>SessionHistoryChange</code>? That change is retrieved (in the previous method) and
-its fields are passed to <code>new_browsing_context</code> to create the <code>BrowsingContext</code>.
+its fields are passed to
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L830"><code>new_browsing_context</code></a>
+to create the
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/browsingcontext.rs#L36"><code>BrowsingContext</code></a>.
 This inserts the new browsing context in <code>Constellation</code>&rsquo;s&rsquo; <code>browsing_contexts</code>
 map and if the load targets an iframe, the browsing context is inserted into its
 parent pipeline&rsquo;s iframe list (<code>Pipeline::children</code>). The document&rsquo;s activity is
@@ -395,18 +434,20 @@ new pipeline is inserted in the browsing context&rsquo;s session history entries
 (<code>BrowsingContext::pipeline</code>). Then, the current document is
 <a href="https://html.spec.whatwg.org/multipage/#unload-a-document">unloaded</a>.</p>
 
-<p>Further, each <code>SessionHistoryChange</code> has an optional <code>replace</code> field which
-describes whether the pipeline the load is replacing needs to be replaced.
-<code>replace</code> is only not <code>None</code> if the load was initiated in an existing browsing
-context. If change has such a field and it&rsquo;s an enum with the variant
-<code>NeedsToReload::No(pipeline_id)</code>, meaning the pipeline hasn&rsquo;t been closed yet,
-it is closed now.</p>
+<p>Further, each
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/session_history.rs#L105"><code>SessionHistoryChange</code></a>
+has an optional <code>replace</code> field which describes whether the pipeline the load is
+replacing needs to be replaced.  <code>replace</code> is only not <code>None</code> if the load was
+initiated in an existing browsing context. If change has such a field and it&rsquo;s
+an enum with the variant <code>NeedsToReload::No(pipeline_id)</code>, meaning the pipeline
+hasn&rsquo;t been closed yet, it is closed now.</p>
 
 <p>On the other hand, if it doesn&rsquo;t have a <code>replace</code> field, the
-<code>JointSessionHistory</code> entry for this load&rsquo;s top-level browsing context is
-retrieved and a <code>SessionHistoryDiff</code> is created for the current load, which
-represents the difference between two adjacent session history entries. It is an
-enum with three variants:</p>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/session_history.rs#L15"><code>JointSessionHistory</code></a>
+entry for this load&rsquo;s top-level browsing context is retrieved and a
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/session_history.rs#L169"><code>SessionHistoryDiff</code></a>
+is created for the current load, which represents the difference between two
+adjacent session history entries. It is an enum with three variants:</p>
 
 <ul>
 <li><code>BrowsingContextDiff</code>, which represents the change of the active pipeline of
@@ -426,32 +467,36 @@ browsing context and as well as the new one is updated.</p>
 
 <h5 id="closing-a-pipeline">Closing a pipeline</h5>
 
-<p>After having gathered the pipelines and states to close, <code>close_pipeline</code> is
-called for each pipeline. This method removes the pipeline id from
+<p>After having gathered the pipelines and states to close,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L3716"><code>close_pipeline</code></a>
+is called for each pipeline. This method removes the pipeline id from
 <code>BrowsingContext::pipelines</code>, closes each, if any, browsing context (iframe) in
-pipeline&rsquo;s document via <code>close_browsing_context</code> (which closes nested pipelines,
-meaning this and <code>close_pipeline</code> end up being called recursively until the
-bottom of the frame tree), and if any pending change is associated with this
-pipeline, that is also removed.</p>
+pipeline&rsquo;s document via
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L3616"><code>close_browsing_context</code></a>
+(which closes nested pipelines, meaning this and <code>close_pipeline</code> end up being
+called recursively until the bottom of the frame tree), and if any pending
+change is associated with this pipeline, that is also removed.</p>
 
 <p>Note, however, that the <code>Pipeline</code> instance isn&rsquo;t actually removed from
 <code>Constellation::pipelines</code> (and thus dropped) until the pipeline&rsquo;s script thread
-indicates it is safe to do so. Thus, <code>Pipeline::exit</code> is called, which sends a
-<code>CompositorMsg::PipelineExited</code> message to the compositor and a
-<code>ConstellationControlMsg::ExitPipeline</code> to the script thread.</p>
+indicates it is safe to do so. Thus,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/pipeline.rs#L355"><code>Pipeline::exit</code></a>
+is called, which sends a <code>CompositorMsg::PipelineExited</code> message to the
+compositor and a <code>ConstellationControlMsg::ExitPipeline</code> to the script thread.</p>
 
-<p><code>ScriptThread::handle_exit_pipeline_msg</code> picks it up on the other side of the
-<code>ConstellationControlMsg::ExitPipeline</code> message, and it first removes any
-incomplete loads associated with this pipeline, then it shuts down pipeline&rsquo;s
-layout thread before removing the document. Finally, a
-<code>ScriptMsg::PipelineExited</code> message is sent back to the constellation, which
-removes the pipeline from <code>Constellation::pipelines</code>.</p>
+<p><a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L2190"><code>ScriptThread::handle_exit_pipeline_msg</code></a>
+picks it up on the other side of the <code>ConstellationControlMsg::ExitPipeline</code>
+message, and it first removes any incomplete loads associated with this
+pipeline, then it shuts down pipeline&rsquo;s layout thread before removing the
+document. Finally, a <code>ScriptMsg::PipelineExited</code> message is sent back to the
+constellation, which removes the pipeline from <code>Constellation::pipelines</code>.</p>
 
 <h5 id="trimming-the-history">Trimming the history</h5>
 
 <p>Finally, since this load is in an existing browsing context, by calling
-<code>trim_history</code> the session history is trimmed for the <em>top-level browsing
-context</em> of the pipeline handling this load, that is, <em>its entire frame tree</em>.</p>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L3246"><code>trim_history</code></a>
+the session history is trimmed for the <em>top-level browsing context</em> of the
+pipeline handling this load, that is, <em>its entire frame tree</em>.</p>
 
 <p>This is rather straight forward. The maximum number of loaded pipelines that may
 stay in memory is retrieved from the preferences (&ldquo;session-history.max-length&rdquo;)
@@ -473,9 +518,10 @@ compositor (i.e. embedder).</p>
 <p><code>ScriptThread::handle_fetch_chunk</code>, as <code>handle_fetch_metadata</code> above, finds the
 <code>ParserContext</code> for this <code>Pipeline</code> and invokes
 <code>ParserContext::process_response_chunk</code>, after which we eventually end up in
-<code>ParserContext::do_parse_sync</code>. This does the heavy-lifting and if the entire
-response body was received, <code>ParserContext::finish</code> is invoked.  Otherwise, we
-wait for more chunks or an explicit EOF signal.</p>
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/servoparser/mod.rs#L472"><code>ParserContext::do_parse_sync</code></a>.
+This does the heavy-lifting and if the entire response body was received,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/servoparser/mod.rs#L545"><code>ParserContext::finish</code></a>
+is invoked. Otherwise, we wait for more chunks or an explicit EOF signal.</p>
 
 <h3 id="processresponseeof">&gt; ProcessResponseEOF</h3>
 
@@ -485,36 +531,46 @@ here, too, we end up in <code>do_parse_sync</code>.</p>
 
 <p>This time, however, if nothing went wrong and the parser is not suspended, the
 <code>finish</code> member is invoked, which sets the document&rsquo;s read state to interactive,
-clears the document&rsquo;s parser, and invokes <code>Document::finish_load</code>. Unless the
-document loader is blocked (TODO what does this mean?), the same way as above,
-<code>ScriptThread</code>&rsquo;s <code>mark_document_with_no_blocked_loads</code> is invoked, which is a
-static function and merely inserts this document into
-<code>docs_with_no_blocking_loads</code>.</p>
+clears the document&rsquo;s parser, and invokes
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/document.rs#L1691"><code>Document::finish_load</code></a>.
+Unless the document loader is blocked (TODO what does this mean?), the same way
+as above, <code>ScriptThread</code>&rsquo;s <code>mark_document_with_no_blocked_loads</code> is invoked,
+which is a static function and merely inserts this document into
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L583"><code>docs_with_no_blocking_loads</code></a>.</p>
 
 <p>The interesting thing is that the document is not immediately finalized, because
 there may be other events the script thread need process first. The event loop
-is run in <code>ScriptThread::start</code>, continuously invoking <code>handle_msgs</code> until
-shutdown. This does a bunch of things not (directly) related to this blog post
-right now, so I&rsquo;m skipping over to the part where this <code>Document</code> and
-potentially others are dequeued from <code>ScriptThread</code>&rsquo;s
-<code>docs_with_no_blocking_loads</code> and <code>maybe_queue_document_completion</code> method is
-invoked on each <code>Document</code> instance. This again does a whole host of things, but
-the important bits are that the document state is set to complete
-(<code>DocumentReadyState::Complete</code>), the window is reflowed and scrolled to a
-fragment if present in the URL, and the constellation is notified of the
-document load, via <code>ScriptMsg::LoadComplete</code>.</p>
+is run in
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L1075"><code>ScriptThread::start</code></a>,
+continuously invoking <code>handle_msgs</code> until shutdown. This does a bunch of things
+not (directly) related to this blog post right now, so I&rsquo;m skipping over to the
+part where this <code>Document</code> and potentially others are
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L1252-L1256">dequeued</a>
+from <code>ScriptThread</code>&rsquo;s <code>docs_with_no_blocking_loads</code> and
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/document.rs#L1869"><code>maybe_queue_document_completion</code></a>
+method is invoked on each <code>Document</code> instance.</p>
 
-<p><code>Constellation</code> handles this with <code>handle_load_complete_msg</code>. If the load
-occurred in a top-level browsing context, the embedder is notified that its
-document finished loading.  Otherwise it&rsquo;s an iframe and
+<p>This again does a whole host of things, but the important bits are that the
+document state is set to complete (<code>DocumentReadyState::Complete</code>), the window
+is reflowed and scrolled to a fragment if present in the URL, and the
+constellation is
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/document.rs#L1922">notified</a>
+of the document load, via <code>ScriptMsg::LoadComplete</code>.</p>
+
+<p><code>Constellation</code> handles this with
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L2199"><code>handle_load_complete_msg</code></a>.
+If the load occurred in a top-level browsing context, the embedder is notified
+that its document finished loading.  Otherwise it&rsquo;s an iframe and
 <code>handle_subframe_loaded</code> is called. This sends a
 <code>ConstellationControlMsg::DispatchIFrameLoadEvent</code> to iframe&rsquo;s parent pipeline&rsquo;s
 event loop.</p>
 
-<p><code>ScriptThread::handle_iframe_load_event</code> takes over, and finds the iframe&rsquo;s
-encompassing <code>Document</code>, then the <code>HTMLIFrameElement</code> itself and invokes
-<code>iframe_load_event_steps</code> on it. This fires the load event for the iframe,
-terminates the <code>LoadBlocker</code> (TODO what&rsquo;s this?) and issues a window reflow.</p>
+<p><a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L1699"><code>ScriptThread::handle_iframe_load_event</code></a>
+takes over, and finds the iframe&rsquo;s encompassing <code>Document</code>, then the
+<code>HTMLIFrameElement</code> in which the load matured and invokes
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/htmliframeelement.rs#L396"><code>iframe_load_event_steps</code></a>
+on it. This fires the load event for the iframe, terminates the <code>LoadBlocker</code>
+(TODO what&rsquo;s this?) and issues a window reflow.</p>
 
 <h3 id="processrequestbody-and-processrequesteof">&gt; ProcessRequestBody and ProcessRequestEOF</h3>
 
