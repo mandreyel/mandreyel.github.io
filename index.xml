@@ -12,12 +12,13 @@
     
     
     <item>
-      <title>Favorite Vim Settings</title>
+      <title>Cool Vim Settings</title>
       <link>/post/fav-vim-settings/</link>
       <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
       
       <guid>/post/fav-vim-settings/</guid>
-      <description>&lt;p&gt;A collection of my favorite vim settings taken from my
+      <description>&lt;p&gt;A collection of some useful and not-so-obvious things you can do with vim,
+taken from my
 &lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;</description>
