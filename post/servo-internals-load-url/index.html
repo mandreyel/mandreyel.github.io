@@ -112,7 +112,7 @@
 
     <div class="post-content">
       <p>This blog post is part of a
-<a href="https://mandreyel.github.io/posts/servo-internals/">series</a> I&rsquo;m doing on Servo.
+<a href="/post/servo-internals/">series</a> I&rsquo;m doing on Servo.
 It&rsquo;s a deep dive into how Servo loads a page given a URL.
 Please note, though, that it is still heavily work-in-progress. Some details may be missing or
 incorrect.</p>
@@ -216,8 +216,12 @@ be less ambiguous names, but I&rsquo;m not sure.</p>
 change for this browsing context. This is why trying to click on a link when
 a page is already loading, the browser stubbornly ignores it and sticks to
 loading the first page you clicked on. The load is also disregarded if the
-pipeline is inactive, but let&rsquo;s get back to this in another blog post (TODO or
-if it&rsquo;s short enough we could explain it here). Then, depending TODO</p>
+pipeline is inactive.</p>
+
+<p>A document (or from <code>Constellation</code>&rsquo;s point of view, the <code>Pipeline</code>) can be in
+  three states: inactive, active, and fully active. This is explained in the
+  <a href="https://html.spec.whatwg.org/multipage/browsers.html#fully-active]">living
+  standard</a>.</p>
 
 <p>TODO replace?</p>
 
@@ -256,7 +260,8 @@ indicating traversal maturation is received. Among others, this object holds a
 <code>NewBrowsingContextInfo</code> field wrapped in an <code>Option</code>, which is used to indicate
 that the pending change introduces a new browsing context (used in the case of
 creating a new top-level browsing context or new iframes, which is not covered
-here), or <code>None</code> if the page load was kicked off in an exiting browsing context.</p>
+here), or <code>None</code> if the page load was kicked off in an existing browsing
+context.</p>
 
 <h3 id="pipeline">Pipeline</h3>
 
@@ -379,14 +384,8 @@ its fields are passed to <code>new_browsing_context</code> to create the <code>B
 This inserts the new browsing context in <code>Constellation</code>&rsquo;s&rsquo; <code>browsing_contexts</code>
 map and if the load targets an iframe, the browsing context is inserted into its
 parent pipeline&rsquo;s iframe list (<code>Pipeline::children</code>). The document&rsquo;s activity is
-also set after <code>new_browsing_context</code>.</p>
-
-<p>A document (or from <code>Constellation</code>&rsquo;s point of view, the <code>Pipeline</code>) can be in
-  three states: inactive, active, and fully active. This is explained in the
-  <a href="https://html.spec.whatwg.org/multipage/browsers.html#fully-active]">living
-  standard</a>.
-A notification is sent to embedder that the browsing context&rsquo;s history has
-changed.</p>
+set after <code>new_browsing_context</code> and a notification is sent to embedder that the
+browsing context&rsquo;s history has changed.</p>
 
 <h4 id="b-existing-browsing-context">b) Existing browsing context</h4>
 
