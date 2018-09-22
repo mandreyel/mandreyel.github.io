@@ -119,6 +119,12 @@ be missing or incorrect.</p>
 
 <p></p>
 
+<p>Also, I&rsquo;m not going to give a full explanation of all components involved in
+this blog post (such as <code>Constellation</code>, <code>Pipeline</code>, <code>ScriptThread</code>,<code>Compostior</code>
+etc), so it&rsquo;s best to read <a href="https://github.com/servo/servo/wiki/Design">the ofificial design
+note</a> to see the bigger picture and
+know what the details to follow are referring to.</p>
+
 <h2 id="entry-points">Entry points</h2>
 
 <p>There are currently four ways in which a URL may be loaded:</p>
@@ -349,7 +355,7 @@ and <code>Send</code> traits.</p>
 
 <p><code>FetchTaskTarget</code> defines the following methods: <code>process_response</code>,
 <code>process_response_eof</code>, <code>process_request_body</code>, and <code>process_request_eof</code>.
-<code>IpcSender</code> is <code>Send</code> by default (meaning it&rsquo;s safe to be sent across channels),
+<code>IpcSender</code> is <code>Send</code> by default (meaning it&rsquo;s safe to be sent across threads),
 but <code>FetchTaskTarget</code> is
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/net_traits/lib.rs#L212">implemented</a>
 for <code>IpcSender&lt;FetchResponseMsg&gt;</code> in <code>net_traits/lib.rs</code>. This is how the fetch
@@ -392,7 +398,7 @@ on it.</p>
 is invoked, which is the entry point to loading a document. It defines bindings,
 sets up the
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/window.rs#L171"><code>Window</code></a>,
-<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/windowproxy.rs#L58"><code>WindowProx[</code>Window<code>]y</code></a>,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/windowproxy.rs#L58"><code>WindowProxy</code></a>,
 and
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/dom/document.rs#L253"><code>Document</code></a>,
 starts HTML and CSS parsing, and kicks off the initial layout.  Most important
@@ -406,9 +412,9 @@ in our case is the <code>ScriptMsg::ActivateDocument</code> message sent to the
 is invoked on the other side of the channel. If the load is targeting an iframe,
 the iframe&rsquo;s parent pipeline is notified that the document changed. Then,
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L3092"><code>change_session_history</code></a>
-is invoked.  If the currently focused pipeline is the same as, or the child
-<code>change_session_history</code> of the one where the load is occurring, the focused
-pipeline is changed to the one which is loading the page.</p>
+is invoked.  If the currently focused pipeline is the same as, or the child of
+the one where the load is occurring, the focused pipeline is changed to the one
+which is loading the page.</p>
 
 <h4 id="a-new-browsing-context">a) New browsing context</h4>
 

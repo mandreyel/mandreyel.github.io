@@ -118,11 +118,14 @@ taken from my
 <h2 id="line-numbers">Line numbers</h2>
 
 <p>Set both <code>number</code> and <code>relativenumber</code> to show the line number under the cursor
-as well as the distance of surrounding lines. However, this is only useful while
-in command mode, so an <code>autocommand</code> can be used to switch to only display
-absolute line numbers when entering insert mode or when switching to another
-buffer. Moreover, this only sets relative line numbers if number is defined in
-the buffer, which is useful when e.g. viewing vim docs.</p>
+as well as the distance of surrounding lines.</p>
+
+<p>However, this is only useful while in command mode, so an <code>autocommand</code> can be
+used to switch to only display absolute line numbers when entering insert mode
+or when switching to another buffer.</p>
+
+<p>Moreover, this only sets relative line numbers if <code>number</code> is set for the
+buffer, which is useful when e.g. viewing vim docs.</p>
 
 <pre><code class="language-vim">fun! s:SetRelativeNumber()
     if &amp;number
