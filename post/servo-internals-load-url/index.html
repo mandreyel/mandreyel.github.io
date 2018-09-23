@@ -122,15 +122,17 @@ be missing or incorrect.</p>
 <p>Also, I&rsquo;m not going to give a full explanation of all components involved in
 this blog post (such as <code>Constellation</code>, <code>Pipeline</code>, <code>ScriptThread</code>,<code>Compostior</code>
 etc), so it&rsquo;s best to read <a href="https://github.com/servo/servo/wiki/Design">the ofificial design
-note</a> to see the bigger picture and
-know what the details to follow are referring to.</p>
+note</a> to see the big picture and the
+<a href="https://html.spec.whatwg.org/multipage/]">living standard</a> to know what the
+details to follow are referring to.</p>
 
 <h2 id="entry-points">Entry points</h2>
 
 <p>There are currently four ways in which a URL may be loaded:</p>
 
 <ul>
-<li>the first time the browser is opened (when a new top-level browsing context is
+<li>the first time the browser is opened (when a new top-level <a href="https://html.spec.whatwg.org/multipage/browsers.html#windows">browsing
+context</a> is
 created);</li>
 <li>when the user clicks on a link or a script navigates the page (both are
 handled by the script thread);</li>
@@ -180,10 +182,9 @@ they are irrelevant for understanding the larger picture).</p>
 hard asserts are made, as it is preferred not to panic in <code>Constellation</code> and
 instead issue a <code>warn!</code> message and return early from the method.</p>
 
-<p>There are two further sub-cases within this method. In the first case, the
-pipeline that initiated the load is located in an iframe (which is a nested
-browsing context), or it&rsquo;s in a top-level browsing context (i.e. a window or
-tab).</p>
+<p>There are two further sub-cases within this method. In the first, the pipeline
+that initiated the load is located in an iframe (which is a nested browsing
+context), or it&rsquo;s in a top-level browsing context (i.e. a window or tab).</p>
 
 <h4 id="a-loading-a-url-in-an-iframe">a) Loading a URL in an IFrame</h4>
 
