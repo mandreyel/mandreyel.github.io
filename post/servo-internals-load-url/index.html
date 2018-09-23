@@ -343,9 +343,11 @@ with the request data and the IPC sender (routed to
 
 <p>All of this is rather involved with lots of details&ndash;and at the time of writing
 this, unfinished&ndash;, so I&rsquo;m skipping a lot of it so as not to get swamped by the
-minutiae. For the purposes of this post the most interesting step is the
-<code>scheme_fetch</code> function, which depending on the URL scheme (&lsquo;data&rsquo;, &lsquo;http&rsquo;,
-&lsquo;about:blank&rsquo;, &lsquo;file&rsquo; etc) launches different fetch operations.</p>
+minutiae. You can, however, read up all the details of a fetch operation in the
+<a href="https://fetch.spec.whatwg.org/">living standard</a>. For the purposes of this post
+the most interesting step is the <code>scheme_fetch</code> function, which depending on the
+URL scheme (&lsquo;data&rsquo;, &lsquo;http&rsquo;, &lsquo;about:blank&rsquo;, &lsquo;file&rsquo; etc) launches different fetch
+operations.</p>
 
 <p>One thing worth expounding on that had initially confused me is that the
 <code>IpcSender</code> passed to the resource thread and then to <code>fetch/methods.rs:fetch</code>
