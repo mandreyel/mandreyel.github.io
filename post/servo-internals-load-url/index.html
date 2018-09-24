@@ -131,40 +131,60 @@ details to follow are referring to.</p>
 <p>There are currently four ways in which a URL may be loaded:</p>
 
 <ul>
-<li>the first time the browser is opened (when a new top-level <a href="https://html.spec.whatwg.org/multipage/browsers.html#windows">browsing
-context</a> is
-created);</li>
-<li>when the user clicks on a link or a script navigates the page (both are
-handled by the script thread);</li>
-<li>when the user types a URL (this is handled by the compositor);</li>
+<li>the first time the browser is opened (here a browser is more abstract and
+    could mean a tab ora window);</li>
+<li>when the user clicks on a link or a script navigates the page;</li>
+<li>when the user types a URL;</li>
 <li>and finally the WebDriver can also initiate URL loads.</li>
 </ul>
 
 <p>What all four have in common is that they&rsquo;re routed through the <code>Constellation</code>,
-which orchestrates most operations in Servo.</p>
+which orchestrates most operations in Servo by sending to and routing messages
+between the various components of Servo.</p>
 
 <p>However, each case boils down to one of two execution paths, which eventually
 coalesce. Therefore I&rsquo;m only going to cover these two cases, and abstract away
 the minor differences.</p>
 
-<h3 id="i-new-top-level-browsing-context">I. New top-level browsing context</h3>
+<h3 id="i-new-browser">I. New browser</h3>
 
-<p>Let&rsquo;s examine the first case, when a page is loaded for the first time (that is,
-no browsing context exists), up until the point when the <code>Pipeline</code> for this
-page is spawned.</p>
+<h4 id="browsing-context">Browsing Context</h4>
 
-<p>The compositor sends the constellation a <code>CompositorMsg::NewBrowser</code> message,
-which includes the URL and the ID for the to-be-created top-level browsing
-context. This message is handled by <code>Constellation</code> with
+<p>As per the standard, a <a href="https://html.spec.whatwg.org/multipage/browsers.html#browsing-context">browsing
+context</a>
+is an environment in which documents (websites) are presented to the user. To
+better conceptualize what this means, a browsing context could be a tab or
+a window&ndash;in which case it is a top-level browsing context&ndash;, or an iframe,
+which is a nested browsing context.</p>
+
+<h3 id="new-top-level-browsing-context">New top-level browsing context</h3>
+
+<p>So let&rsquo;s examine the first case, when a page is loaded for the first time (that
+is, no browsing context exists), up until the point when the <code>Pipeline</code> for this
+page is spawned&ndash;after which the same procedures are executed for all cases.</p>
+
+<p>The compositor, which is the UI thread and besides compositing tiles from the
+renderer and sending them to the screen, also acts as the entry point for user
+side interaction with Servo (though this is not exposed, and is instead wrapped
+in a
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/servo/lib.rs#L126"><code>Servo</code></a>
+struct, which serves as the API for the embedder),
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/servo/lib.rs#L345">sends</a>
+the constellation a <code>CompositorMsg::NewBrowser</code> message, which includes the URL
+and the ID for the to-be-created top-level browsing context.</p>
+
+<p>This message is handled by <code>Constellation</code> with
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L1632"><code>handle_new_top_level_browsing_context</code></a>,
 which sets up fields like the window size, the <code>LoadData</code> instance (which
 besides the URL includes other metadata, like the HTTP headers, data, referrer
-policy, referrer URL, and others), the <code>PipelineId</code> for the <code>Pipeline</code> of this
-page, among others.  Then, it proceeds to create this pipeline by calling
-<code>Constellation::new_pipeline</code> and also creates a <code>SessionHistoryChange</code> with
-<code>Constellation::add_pending_change</code>.  But before delving into these two
-functions, let&rsquo;s first examine the other major case that leads to calling the
-same two functions.</p>
+policy, referrer URL, and other things necessary to fetch the page), the
+<code>PipelineId</code> for the <code>Pipeline</code> of this page, among others. Then, it proceeds to
+create this pipeline by calling <code>Constellation::new_pipeline</code> and also creates a
+<code>SessionHistoryChange</code> with <code>Constellation::add_pending_change</code>.</p>
+
+<p>But before delving into these two functions and explaining what a pipeline is,
+let&rsquo;s first examine the other major case that leads to calling these same two
+functions.</p>
 
 <h3 id="ii-fromscriptmsg-fromcompositor-webdrivercommandmsg-loadurl">II. {FromScriptMsg, FromCompositor, WebDriverCommandMsg}::LoadUrl</h3>
 
@@ -173,7 +193,7 @@ or some script), or a WebDriver command initiates a page load&ndash;is all handl
 calling
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L2035"><code>Constellation::load_url</code></a>
 (though in the case of WebDriver there are a few extra steps preceding this, but
-they are irrelevant for understanding the larger picture).</p>
+they are not relevant now).</p>
 
 <h4 id="the-browsing-context-must-exist">The browsing context must exist</h4>
 
@@ -249,22 +269,7 @@ creating the <code>Pipeline</code> and <code>SessionHistoryChange</code> objects
 <code>handle_script_loaded_url_in_iframe_msg</code>, and <code>load_url</code>) conclude in these two
 steps.</p>
 
-<p>The
-<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L677"><code>new_pipeline</code></a>
-method contains steps to spawn a new <code>Pipeline</code>, whose logic mostly consists of
-choosing an existing <code>EventLoop</code> (which is basically an <code>IpcSender</code> to a
-<code>Pipeline</code>&rsquo;s <code>ScriptThread</code>) if this load is not sandboxed and has an opener or
-parent <code>Pipeline</code>, and is either an <code>about:blank</code> load or the URL for the new
-page shares the same host with an existing event loop.  Otherwise this event
-loop will be <code>None</code> if none of these conditions are fulfilled.</p>
-
-<p>Then,
-<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/pipeline.rs#L184"><code>Pipeline::spawn</code></a>
-is invoked with this optional <code>EventLoop</code>, many fields from <code>Constellation</code>, and
-a bunch of load specific arguments passed to <code>new_pipeline</code> (like the browsing
-context and pipeline IDs, whether the page was loaded in private browsing mode,
-the <code>LoadData</code>, and others&ndash;best to look at the relevant code for details). More
-details follow in a bit.</p>
+<h3 id="new-session-history-entry">New session history entry</h3>
 
 <p>In each of the two cases,
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L858"><code>Constellation::add_pending_change</code></a>
@@ -291,25 +296,44 @@ loop. More broadly speaking, it acts as a document&rsquo;s frontend for
 <code>Constellation</code>.</p>
 
 <p>Each <code>Pipeline</code> has an event loop and a layout thread. Multiple <code>Pipeline</code>s may
-share the same event loop (<code>ScriptThread</code>) if their document shares the same
+share the same event loop (script thread) if their document shares the same
 host, so as to enable them to become same-origin via <code>document.domain</code> (though
 there is ongoing discussion on whether this is the desired behaviour in
 <a href="https://github.com/servo/servo/issues/21206">#21206</a>), but in all cases each
 <code>Pipeline</code> has its own layout thread, responsible for rendering the page.</p>
 
-<h4 id="spawning-a-pipeline">Spawning a Pipeline</h4>
+<h3 id="spawning-a-pipeline">Spawning a pipeline</h3>
 
-<p>If <code>Pipeline::spawn</code> was called with <code>Some(event_loop)</code>, it sends a message to
-this event loop requesting to attach to it a new <code>LayoutThread</code> associated with
-the new <code>Pipeline</code>, and kicks off the page load.
-If this argument is <code>None</code>, and depending on whether multiprocess is enabled,
-the pipeline is spawned as such, or <code>UnprivilegedPipelineContent::start_all</code> is
-called, which starts the layout and script threads (with <code>LayoutThread::create</code>
-and <code>ScriptThread::create</code>, respectively). TODO expand on multiprocess</p>
+<p>The
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/constellation.rs#L677"><code>new_pipeline</code></a>
+method contains steps to spawn a new <code>Pipeline</code>, whose logic mostly consists of
+choosing an existing <code>EventLoop</code>. This is basically an <code>IpcSender</code> to a
+<code>Pipeline</code>&rsquo;s <code>ScriptThread</code>. The <code>ScriptThread</code> is the entity responsible for
+creating and managing the DOM, executing the JavaScript VM, and handling other
+events. If this load is not sandboxed and has an opener or parent <code>Pipeline</code>,
+and is either an <code>about:blank</code> load or the URL for the new page shares the same
+host with an existing event loop, the new pipeline will share its
+parent&rsquo;s/creator&rsquo;s event loop. Otherwise it will be <code>None</code>.</p>
 
-<p><a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L628-L631"><code>ScriptThread::create</code></a>
-spawns a new thread on which the event loop will be run.  But before starting
-the event loop,
+<p>Then,
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/constellation/pipeline.rs#L184"><code>Pipeline::spawn</code></a>
+is invoked with this <code>Option&lt;EventLoop&gt;</code>, many fields from <code>Constellation</code>, and
+a bunch of load specific arguments passed to <code>new_pipeline</code> (like the browsing
+context and pipeline IDs, whether the page was loaded in private browsing mode,
+the <code>LoadData</code>, and others&ndash;best to look at the relevant code for details).</p>
+
+<p>If <code>spawn</code> was called with <code>Some(event_loop)</code>, it sends a message to this event
+loop requesting to attach to it a new <code>LayoutThread</code> associated with the new
+<code>Pipeline</code>, and kicks off the page load.  If this argument is <code>None</code>, and
+depending on whether multiprocess is enabled, the pipeline is spawned as such,
+or <code>UnprivilegedPipelineContent::start_all</code> is called, which starts the layout
+and script threads (with <code>LayoutThread::create</code> and <code>ScriptThread::create</code>,
+respectively). TODO expand on multiprocess</p>
+
+<p>Otherwise
+<a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L628-L631"><code>ScriptThread::create</code></a>
+is used to spawn a new thread on which the event loop will be run. Though before
+starting the event loop,
 <a href="https://github.com/servo/servo/blob/9d52fb88abf3843c7db338120e9f518a1834f80f/components/script/script_thread.rs#L3012"><code>ScriptThread::pre_page_load</code></a>
 is invoked, which sets up the request and sends a
 <code>ScriptMsg::InitiateNavigateRequest</code> to <code>Constellation</code>.</p>
