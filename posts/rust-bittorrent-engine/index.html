@@ -367,7 +367,8 @@ downloading from 40-50 peers, comes down at ~9 MBps on my network. But that&rsqu
 also the exact capacity of my downlink. Quite good, but it doesn&rsquo;t tell us much.</p>
 <p>Testing on localhost, with a single cratetorrent seed and leech, the current
 limit seems to be around 270 MBps. This value is from the second run, making use
-of the seed&rsquo;s saturated read cache.</p>
+of the seed&rsquo;s saturated read cache. The first run fluctuated in the range
+160-200 MBps.</p>
 <p>However, CPU usage on the seed is <em>very</em> high. Profiling points to the disk read
 function where half of the CPU time is taken up by <code>preadv</code> and the other by
 <code>__memset_avgx2__erms</code>. I have a suspicion as to what this might be but I&rsquo;ll
