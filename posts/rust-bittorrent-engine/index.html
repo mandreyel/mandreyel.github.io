@@ -101,7 +101,7 @@ availability, a key feature of the protocol.</p>
 <p>A tricky part here is that files are not padded to align with piece boundaries.</p>
 <p>
 <figure>
-  <img src="/images/data-repr.png" alt="data representation" />
+  <img src="/images/data-repr.svg" alt="data representation" />
 </figure>
 
 
@@ -136,7 +136,7 @@ fill the link&rsquo;s capacity.</p>
 <p>A picture makes this explanation a lot more pleasant:</p>
 <p>
 <figure>
-  <img src="/images/request-pipeline.png" alt="download pipelining benefits" />
+  <img src="/images/request-pipeline.svg" alt="download pipelining benefits" />
 </figure>
 
 
@@ -177,7 +177,7 @@ instead increases the request queue size every time a block is received, and
 when the download rate isn&rsquo;t increasing much anymore.<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup></p>
 <p>
 <figure>
-  <img src="/images/slow-start.png" alt="download pipelining benefits" />
+  <img src="/images/slow-start.svg" alt="download pipelining benefits" />
 </figure>
 
 
@@ -367,7 +367,7 @@ downloading from 40-50 peers, comes down at ~9 MBps on my network. But that&rsqu
 also the exact capacity of my downlink. Quite good, but it doesn&rsquo;t tell us much.</p>
 <p>Testing on localhost, with a single cratetorrent seed and leech, the current
 limit seems to be around 270 MBps. This value is from the second run, making use
-of the seed&rsquo;s saturated read cache. The first run netted around 160-200 MBps.</p>
+of the seed&rsquo;s saturated read cache.</p>
 <p>However, CPU usage on the seed is <em>very</em> high. Profiling points to the disk read
 function where half of the CPU time is taken up by <code>preadv</code> and the other by
 <code>__memset_avgx2__erms</code>. I have a suspicion as to what this might be but I&rsquo;ll
