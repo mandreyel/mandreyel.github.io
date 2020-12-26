@@ -50,10 +50,10 @@ optimizations, and some of the insights gained.</p>
 <h2 id="prologue">Prologue</h2>
 <p>Growing up, torrenting was a big thing around me. I was always curious how it
 worked.</p>
-<p>This curiosity only grew after I had gotten into programming and started to
-understand the details. There is a piece of technology that is so effective yet
-simple, that, without any marketing, it gained widespread adoption due simply to
-sheer technical superiority. It just worked and people used it.</p>
+<p>This curiosity only grew after I had gotten into programming and understood more
+details. There is a piece of technology that is so effective yet simple, that,
+without any marketing, it gained widespread adoption due to sheer technical
+superiority. It just worked and people used it.</p>
 <p>So why not write one? I did, in C++. It didn&rsquo;t work out. Half-finished,
 unstable, not well tested. Let&rsquo;s forget it.</p>
 <p>Fast-forward a few years. I got into Rust and needed a familiar playground to
@@ -93,11 +93,11 @@ protocol, however, they are all just one big contiguous sequence of bytes.</p>
 <p>This byte sequence is cut up into equal sized <em>pieces</em>, usually some multiple of
 16 KiB. Pieces are further cut up into 16 KiB <em>blocks</em>. Peers exchange these
 blocks of data and use them to reassemble the torrent&rsquo;s files.<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
-<p>Chunking up pieces enables downloading a piece concurrently from multiple peers,
-thereby potentially finishing the piece sooner. Since a client does not need to
-have the whole torrent to start sharing it with others, a finished piece can
-thus be immediately shared with other peers that don&rsquo;t yet have it. This increases
-availability, a key feature of the protocol.</p>
+<p>Peers can only share with each other the complete pieces they have. However,
+breaking a piece up into blocks enables downloading it from multiple peers,
+thereby potentially completing it sooner. Once complete, the peer can
+immediately share it with other peers, even if it does not have all pieces
+itself. This increases availability, a key feature of the protocol.</p>
 <p>A tricky part here is that files are not padded to align with piece boundaries.</p>
 <p>
 <figure>
@@ -148,7 +148,10 @@ recommended by the spec itself.</p>
 of the BDP, by assuming the latency to be a constant 1 second, to get the
 request queue size:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#66d9ef">let</span> request_queue_size <span style="color:#f92672">=</span> download_rate <span style="color:#f92672">/</span> BLOCK_LEN;
-</code></pre></div><h3 id="slow-start">Slow start</h3>
+</code></pre></div><p>The 1 second value was chosen for simplicity, but it&rsquo;s a reasonable guess if we
+take the link to mean the full request round-trip from one peer&rsquo;s disk to that
+of another.</p>
+<h3 id="slow-start">Slow start</h3>
 <p>The above suggests an interesting problem: what&rsquo;s the fastest way of
 arriving at the link&rsquo;s capacity? Taking time to get to this optimum number costs
 time. No good.</p>
@@ -215,8 +218,7 @@ runtime in Rust.</p>
 (essentially application level <a href="https://en.wikipedia.org/wiki/Green_threads">green
 threads</a>). Because tasks are
 as good as separate threads from the point of view of the borrow-checker, shared
-access is not permitted without synchronization. There are two ways to work
-around this.</p>
+access is not permitted without synchronization. There are two ways to do that.</p>
 <h3 id="task-event-loop">Task event loop</h3>
 <p>Control flow between tasks is primarily implemented via asynchronous <a href="https://en.wikipedia.org/wiki/Message_passing"><em>message
 passing</em></a>, using
@@ -227,12 +229,12 @@ from other tasks.</p>
 <p>Torrents and peer sessions perform a periodic &ldquo;tick&rdquo; (like the tick of a clock),
 once a second currently, to update their internal state and broadcast messages.
 This is when alerts (such as periodic download statistics or &ldquo;download
-complete&rdquo;) are sent to the library user for example.</p>
+complete&rdquo;) are sent to the library user for example.<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup></p>
 <p>A torrent&rsquo;s event loop might look like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#66d9ef">loop</span> {
     select<span style="color:#f92672">!</span> {
         <span style="color:#75715e">// periodic tick
-</span><span style="color:#75715e"></span>        _ <span style="color:#f92672">=</span> loop_timer.select_next_some() <span style="color:#f92672">=&gt;</span> {
+</span><span style="color:#75715e"></span>        _ <span style="color:#f92672">=</span> tick_timer.select_next_some() <span style="color:#f92672">=&gt;</span> {
             self.tick().<span style="color:#66d9ef">await</span><span style="color:#f92672">?</span>;
         }
         <span style="color:#75715e">// peers wanting to connect
@@ -262,27 +264,28 @@ But for shared mutable access, this was not so clear when
 I started writing this: do I use
 <a href="https://docs.rs/tokio/0.2.16/tokio/sync/struct.RwLock.html">locks</a>
 or full channel round-trips?</p>
-<p>To be more concrete, the two entities in question:</p>
+<p>To be more concrete, the two entities in question that peer sessions need to
+interact with all the time:</p>
 <ul>
-<li><strong>piece picker</strong>: keeps track of which pieces we have and which one to pick
-next. Peer sessions need to interact with it all the time to pick the next
-piece from peer.</li>
-<li><strong>piece downloads</strong>: keeps track of pending downloads. Peer sessions use it to
+<li><strong>piece picker</strong>: keeps track of what is already downloaded and is used by
+all sessions to choose which piece to download next.</li>
+<li><strong>piece downloads</strong>: the pending downloads. Peer sessions use it to
 continue existing downloads and to administer received blocks.</li>
 </ul>
-<p>While it would be possible to keep these in torrent and let peer sessions use
+<p>It would be possible to keep these in torrent and let peer sessions use
 messages to manipulate them, but since they are used in many places, it is more
 straightforward to use locks. Which one was the better overall solution, in
 terms of performance, though? Is there a drastic difference between the two that
 would make choosing one the obvious solution?</p>
-<p>I did not trust my intuition so I set up some synthetic benchmarks to simulate
-the two approaches. While not exactly representing the real world, I wanted to
+<p>I did not trust my intuition so I set up a synthetic benchmark to simulate the
+two approaches. While not exactly representing the real world, I wanted to
 have a rough idea to help guide my decision.</p>
 <p>It was simple: spawn the specified number of tasks, let each simulate
-a request one block at a time, delay the task some amount of time until
+a &ldquo;request&rdquo; one block at a time, delay the task some amount of time while
 &ldquo;receiving&rdquo; the block, and finally sending a notification to the main task for
-administration. Then repeat until all pieces are &ldquo;downloaded.&rdquo; These steps made
-use of the piece picker and the pending downloads in various steps.</p>
+administration. Then repeat until all pieces are &ldquo;downloaded.&rdquo; (No actual network
+IO took place, hence the quotes.) These steps made use of the piece picker
+and the pending downloads in various steps.</p>
 <p>The results:</p>
 <ul>
 <li>If the delay was set to 0, channels left locks in the dust. The difference was
@@ -292,7 +295,7 @@ much even, up until about 500 tasks.</li>
 </ul>
 <p>After that, channels started to emerge victorious even if a delay was set. Thus
 a takeaway here (and not just for Rust): if you need <em>very</em> high concurrency,
-message passing is the way to go.<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup></p>
+message passing is the way to go.<sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup></p>
 <p>However, I ended up going with the lock based solution, for a few reasons:</p>
 <ul>
 <li>It&rsquo;s not expected to have much more than a 100 peers per torrent. Most clients
@@ -318,16 +321,16 @@ are sensible:</p>
 so due to speculative execution mitigations as of late. Use batching where
 possible.</li>
 <li>However, if possible, avoid copying block buffers, of which there could be
-many. Copying many 16 KiB buffers is an unwanted cost.</li>
+many. Copying many 16 KiB buffers is an unnecessary cost.</li>
 </ul>
 <p>Thus downloaded blocks of a piece are queued in a write buffer and are
 only written to disk once the piece is complete. This happens using a single
 syscall and without additional buffer copies, using <em>positional vectored IO</em>:
 <a href="https://linux.die.net/man/2/pwritev"><code>pwritev</code></a>.</p>
 <p>This kernel API allows writing a list of byte buffers at a given position in the
-file in one atomic operation.<sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> There is no need to seek, nor
+file in one atomic operation.<sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup> There is no need to seek, nor
 is there one to write each block separately, or to coalesce buffers into a
-single buffer.<sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup></p>
+single buffer.<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup></p>
 <p>An interesting discussion around this has evolved on
 <a href="https://www.reddit.com/r/rust/comments/kiah3q/i_wrote_cratetorrent_a_bittorrent_engine_in_rust/ggprwcd">reddit</a>.</p>
 <h2 id="how-do-i-test-this">How do I test this?</h2>
@@ -385,7 +388,7 @@ libtorrent. :)</p>
 <p>However, there are some notable <strong>limitations</strong>:</p>
 <ul>
 <li>It only works on Linux at the moment, due to the above mentioned use of
-Linux-only syscalls.<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup></li>
+Linux-only syscalls.<sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></li>
 <li>It&rsquo;s also missing many features that a fully baked torrent client would have.
 Use <code>libtorrent</code> or something else if you want a battle tested solution.</li>
 </ul>
@@ -393,7 +396,7 @@ Use <code>libtorrent</code> or something else if you want a battle tested soluti
 <p>There is a lot more to come: profiling and optimizing, discussing other
 interesting aspects of both cratetorrent and tokio based apps in general, many
 features, and more.</p>
-<p>Stay tuned!</p>
+<p>Stay tuned.<sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></p>
 <hr>
 <section class="footnotes" role="doc-endnotes">
 <hr>
@@ -431,6 +434,14 @@ swarm, to&ndash;again&ndash;increase availability. <a href="#fnref:4" class="foo
 the overall download time! <a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:7" role="doc-endnote">
+<p>Ticks occur once a second because stats don&rsquo;t need to be sent more
+frequently, and nothing else internally requires more frequent ticks. By the
+way, most clients update their UI once a second or even once every few
+seconds, so there is little need to do more work than that. But of course
+there may be other use cases, so this will likely be configurable in the
+future. <a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:8" role="doc-endnote">
 <p>We&rsquo;re talking differences of 150ms versus 25s for large
 number of tasks (in favor of channels). This is not so surprising, however:
 since the actual work done is very little, when there is no delay or the
@@ -442,27 +453,31 @@ down the program. Whereas with the channels based solution, the data is only
 ever mutated by one CPU, therefore no cache pollution occurs. And sending
 messages via channels is very cheap as, depending on the channel
 implementation, it most likely uses a lock-free queue, making it
-probably the only place that CPUs have to synchronize among each other. <a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+probably the only place that CPUs have to synchronize among each other. <a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:8" role="doc-endnote">
+<li id="fn:9" role="doc-endnote">
 <p>However, the kernel APIs don&rsquo;t guarantee
 writing the full contents of all buffers to disk. Therefore most
 implementations, including cratetorrent, call <code>pwritev</code> repeatedly until all
-bytes are written. <a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+bytes are written. <a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:9" role="doc-endnote">
+<li id="fn:10" role="doc-endnote">
 <p>There is also
 <a href="https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write"><code>Write::write_all_vectored</code></a>,
 but it still requires a seek, and while cross-platform, on Windows it is
 actually just a shim over calling <code>Write::write</code> repeatedly, which is most
 probably worse than just copying the blocks into a single buffer and performing
 a single read (due to the cumulative cost of repeatedly context switching into
-the kernel). <a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+the kernel). <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:10" role="doc-endnote">
+<li id="fn:11" role="doc-endnote">
 <p>It&rsquo;s fairly easy to feature-gate these to Linux and use a
 different fallback on other platforms. I didn&rsquo;t want to complicate this MVP,
-but I&rsquo;ll probably do this soon. <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+but I&rsquo;ll probably do this soon. <a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:12" role="doc-endnote">
+<p>E.g. you can add this blog to your RSS reader, but I&rsquo;ll also
+be posting to reddit.com/r/rust and news.ycombinator.com. <a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
 </section>
