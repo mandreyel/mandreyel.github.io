@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<style type=text/css>body{font-family:monospace;}</style>
+	<title>Cool Vim Settings</title>
+	
+	
+	<link rel="stylesheet" href="/css/style.css">
+	
+	
+</head>
+<body>
+	<header>
+	======================<br>
+	== <a href="/">mandreyel&#39;s blog</a> ==<br>
+	======================
+	<div style="float: right;">...this space is growing...</div><br>
+	<p>
+	<nav>
+			<a href="/"><b>Start</b></a>.
+			
+			
+			<a href="/posts/"><b>Posts</b></a>.
+			
+			<a href="/tags/"><b>Tags</b></a>.
+			
+	</nav>
+	</p>
+	
+</header>
+
+	
+	<main>
+		<article>
+			<h1>Cool Vim Settings</h1>
+			<b><time>2018-09-20 21:49:45</time></b>
+		       
+		           <a href="/tags/vim">vim</a>
+        	       
+
+			<div>
+				<p>A collection of some useful and not-so-obvious things you can do with vim,
+taken from my
+<a href="https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc">vimrc</a>.</p>
+<h2 id="line-numbers">Line numbers</h2>
+<p>Set both <code>number</code> and <code>relativenumber</code> to show the line number under the cursor
+as well as the distance of surrounding lines.</p>
+<p>However, this is only useful while in command mode, so an <code>autocommand</code> can be
+used to switch to only display absolute line numbers when entering insert mode
+or when switching to another buffer.</p>
+<p>Moreover, this only sets relative line numbers if <code>number</code> is set for the
+buffer, which is useful when e.g. viewing vim docs.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#66d9ef">fun</span>! <span style="color:#a6e22e">s</span>:<span style="color:#a6e22e">SetRelativeNumber</span>()<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>    <span style="color:#66d9ef">if</span> &amp;<span style="color:#a6e22e">number</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>        <span style="color:#a6e22e">set</span> <span style="color:#a6e22e">relativenumber</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>    <span style="color:#66d9ef">endif</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">endfun</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">fun</span>! <span style="color:#a6e22e">s</span>:<span style="color:#a6e22e">UnsetRelativeNumber</span>()<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>    <span style="color:#66d9ef">if</span> &amp;<span style="color:#a6e22e">number</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>        <span style="color:#a6e22e">set</span> <span style="color:#a6e22e">norelativenumber</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>    <span style="color:#66d9ef">endif</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">endfun</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">augroup</span> <span style="color:#a6e22e">NumberToggle</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#a6e22e">autocmd</span>!<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#a6e22e">autocmd</span> <span style="color:#a6e22e">BufEnter</span>,<span style="color:#a6e22e">FocusGained</span>,<span style="color:#a6e22e">InsertLeave</span> * <span style="color:#a6e22e">call</span> <span style="color:#a6e22e">s</span>:<span style="color:#a6e22e">SetRelativeNumber</span>()<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#a6e22e">autocmd</span> <span style="color:#a6e22e">BufLeave</span>,<span style="color:#a6e22e">FocusLost</span>,<span style="color:#a6e22e">InsertEnter</span>   * <span style="color:#a6e22e">call</span> <span style="color:#a6e22e">s</span>:<span style="color:#a6e22e">UnsetRelativeNumber</span>()<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">augroup</span> <span style="color:#a6e22e">END</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="preemptive-scrolling">Preemptive scrolling</h2>
+<p>Set <code>scrolloff</code> to some number to leave that many lines above or under the
+cursor when reaching the top or bottom of the window. However, this breaks
+<code>Shift+L</code> and <code>Shift+H</code> when you want to navigate to the top or bottom of the
+window. We can remap these to travel the rest of the <code>scrolloff</code> value.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#75715e">&#34; Always leave 5 lines above/below the cursor when nearing the top/bottom of the</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e">&#34; window.</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">scrolloff</span>=<span style="color:#ae81ff">5</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e">&#34; Due to scrollof, Shift+{H,L} no longer go to the top/bottom of the visible</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e">&#34; window, so we need to skip the rest of the way there with the movement</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e">&#34; commands.</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">S</span>-<span style="color:#a6e22e">h</span>&gt; &lt;<span style="color:#a6e22e">S</span>-<span style="color:#a6e22e">h</span>&gt;<span style="color:#ae81ff">5</span>k<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">S</span>-<span style="color:#a6e22e">l</span>&gt; &lt;<span style="color:#a6e22e">S</span>-<span style="color:#a6e22e">l</span>&gt;<span style="color:#ae81ff">5</span>j<span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="editing--sourcing-vimrc">Editing &amp; sourcing vimrc</h2>
+<p>If you customize vim all the time, then it is extremely useful to quickly hop
+into your vimrc and then source it, all without every exiting vim&ndash;which is
+very nearly impossible, from what I hear!</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#75715e">&#34; Shortcuts to quickly edit and source .vimrc.</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">leader</span>&gt;<span style="color:#a6e22e">ve</span> :<span style="color:#a6e22e">e</span> $<span style="color:#a6e22e">MYVIMRC</span>&lt;<span style="color:#a6e22e">CR</span>&gt;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">leader</span>&gt;<span style="color:#a6e22e">vs</span> :<span style="color:#a6e22e">source</span> $<span style="color:#a6e22e">MYVIMRC</span>&lt;<span style="color:#a6e22e">CR</span>&gt;<span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="save-read-only-files">Save read-only files</h2>
+<p>You should probably use <code>sudoedit</code> but this can come in handy when you&rsquo;ve
+forgotten to use that:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">cmap</span> <span style="color:#a6e22e">w</span>!! <span style="color:#a6e22e">w</span> !<span style="color:#a6e22e">sudo</span> <span style="color:#a6e22e">tee</span> % &gt;<span style="color:#e6db74">/dev/</span><span style="color:#a6e22e">null</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="visual-selection-enhancements">Visual selection enhancements</h2>
+<p>Visually select the text that was last edited/pasted:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"> <span style="color:#a6e22e">noremap</span> <span style="color:#a6e22e">gV</span> `[<span style="color:#a6e22e">v</span>`]<span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Reselect visual block after indentation:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">vnoremap</span> &lt; &lt;<span style="color:#a6e22e">gv</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">vnoremap</span> &gt; &gt;<span style="color:#a6e22e">gv</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="more-intuitive-searching">More intuitive searching</h2>
+<p>Highlight search matches:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">hlsearch</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Move cursor to the closest match:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">incsearch</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Ignore cases, <em>but</em> only when the cases are not uniform. That is, make searching
+case-sensitive when there are upper and lower case letters.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">ignorecase</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">smartcase</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Starting the search backwards or forwards switches up the role of the <code>n</code> and
+<code>N</code> keys. This is rather confusing, so let&rsquo;s make pressing <code>n</code> always go to the next
+search match and pressing <code>N</code> always go to the previous match. This also centers
+the screen on the current match under the cursor.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">expr</span>&gt; <span style="color:#a6e22e">n</span> <span style="color:#e6db74">&#39;Nn&#39;</span>[<span style="color:#a6e22e">v</span>:<span style="color:#a6e22e">searchforward</span>] . <span style="color:#e6db74">&#39;zz&#39;</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">expr</span>&gt; <span style="color:#a6e22e">N</span> <span style="color:#e6db74">&#39;nN&#39;</span>[<span style="color:#a6e22e">v</span>:<span style="color:#a6e22e">searchforward</span>] . <span style="color:#e6db74">&#39;zz&#39;</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="more-intuitive-movements">More intuitive movements</h2>
+<p>When you have line wrapping on, navigating them is not exactly intuitive
+(e.g. pressing the up and down keys traverse to the next logical line, not the next
+line visible on screen). This is easy to remedy:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#75715e">&#34; Navigate wrapped lines as though they were normal lines with line breaks.</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> <span style="color:#a6e22e">j</span> <span style="color:#a6e22e">gj</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> <span style="color:#a6e22e">k</span> <span style="color:#a6e22e">gk</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> $ <span style="color:#a6e22e">g</span>$<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> <span style="color:#ae81ff">0</span> <span style="color:#a6e22e">g0</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p><code>C</code> and <code>D</code> change or delete the rest of the line starting at cursor, however
+their &ldquo;opposite&rdquo; command, <code>Y</code> (copying/yanking), does not do anything, which is
+rather counter-intuitive. Let&rsquo;s make it behave like the other capitalized
+movement commands:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">nnoremap</span> <span style="color:#a6e22e">Y</span> <span style="color:#a6e22e">y</span>$<span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="moving-lines-up-and-down">Moving lines up and down</h2>
+<p>I really don&rsquo;t like IDEs, but they have one feature I missed in vim: moving
+lines up and down, without the ritual of deleting (<code>dd</code>) and pasting them above
+or below the cursor (<code>&lt;s-p&gt;</code> or <code>p</code>). Though admittedly this is only a gain if
+you want to move a line a few lines at most, as otherwise deleting it, using a
+more efficient movement command and pasting it elsewhere is more efficient.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">silent</span>&gt; &lt;<span style="color:#a6e22e">C</span>-<span style="color:#a6e22e">k</span>&gt; :<span style="color:#a6e22e">move</span><span style="color:#ae81ff">-2</span>&lt;<span style="color:#a6e22e">CR</span>&gt;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">xnoremap</span> &lt;<span style="color:#a6e22e">silent</span>&gt; &lt;<span style="color:#a6e22e">C</span>-<span style="color:#a6e22e">k</span>&gt; :<span style="color:#a6e22e">move</span><span style="color:#ae81ff">-2</span>&lt;<span style="color:#a6e22e">CR</span>&gt;<span style="color:#a6e22e">gv</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">nnoremap</span> &lt;<span style="color:#a6e22e">silent</span>&gt; &lt;<span style="color:#a6e22e">C</span>-<span style="color:#a6e22e">j</span>&gt; :<span style="color:#a6e22e">move</span>+&lt;<span style="color:#a6e22e">CR</span>&gt;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#a6e22e">xnoremap</span> &lt;<span style="color:#a6e22e">silent</span>&gt; &lt;<span style="color:#a6e22e">C</span>-<span style="color:#a6e22e">j</span>&gt; :<span style="color:#a6e22e">move</span>&#39;&gt;+&lt;<span style="color:#a6e22e">CR</span>&gt;<span style="color:#a6e22e">gv</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="better-formatting">Better formatting</h2>
+<p><code>formatoptions</code> is worth researching, it has a lot of interesting options. My
+favorites:</p>
+<p>Remove the comment leader character when joining lines with <code>Shift+j</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">formatoptions</span>+=<span style="color:#a6e22e">j</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Automatically insert the comment leader when hitting enter:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">formatoptions</span>+=<span style="color:#a6e22e">r</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Automatically insert the comment leader when entering insert mode with <code>o</code> or
+<code>Shift+o</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">formatoptions</span>+=<span style="color:#a6e22e">o</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><p>Allow formatting comments with <code>gq</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-vim" data-lang="vim"><span style="color:#a6e22e">set</span> <span style="color:#a6e22e">formatoptions</span>+=<span style="color:#a6e22e">q</span><span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div>
+			</div>
+		</article>
+	</main>
+<aside>
+	<div>
+		<div>
+			<h3>LATEST POSTS</h3>
+		</div>
+		<div>
+			<ul>
+				
+				<li><a href="/posts/rust-bittorrent-engine/">Writing a Bittorrent engine in Rust</a></li>
+				
+				<li><a href="/posts/fav-vim-settings/">Cool Vim Settings</a></li>
+				
+				<li><a href="/posts/servo-internals-load-url/">Servo Internals: Loading Pages</a></li>
+				
+				<li><a href="/posts/servo-internals/">Servo Internals</a></li>
+				
+			</ul>
+		</div>
+	</div>
+</aside>
+
+
+	<footer>
+	<p>&copy; 2020 <a href="/"><b>mandreyel&#39;s blog</b></a>.
+	<a href="https://github.com/mandreyel"><b>Github</b></a>.
+	</p>
+</footer>
+
+</body>
+</html>

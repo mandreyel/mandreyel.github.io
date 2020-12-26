@@ -1,12 +1,34 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>servo on mandreyel&#39;s blog</title>
-    <link>/tags/servo/</link>
-    <description>Recent content in servo on mandreyel&#39;s blog</description>
+    <title>Posts on mandreyel&#39;s blog</title>
+    <link>/posts/</link>
+    <description>Recent content in Posts on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Sep 2018 23:47:55 +0200</lastBuildDate><atom:link href="/tags/servo/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 26 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Writing a Bittorrent engine in Rust</title>
+      <link>/posts/rust-bittorrent-engine/</link>
+      <pubDate>Sat, 26 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/posts/rust-bittorrent-engine/</guid>
+      <description>&lt;p&gt;This post recounts the journey of writing
+&lt;a href=&#34;https://github.com/mandreyel/cratetorrent&#34;&gt;cratetorrent&lt;/a&gt;, interesting
+optimizations, and some of the insights gained.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Cool Vim Settings</title>
+      <link>/posts/fav-vim-settings/</link>
+      <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
+      
+      <guid>/posts/fav-vim-settings/</guid>
+      <description>&lt;p&gt;A collection of some useful and not-so-obvious things you can do with vim,
+taken from my
+&lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
+    
     <item>
       <title>Servo Internals: Loading Pages</title>
       <link>/posts/servo-internals-load-url/</link>

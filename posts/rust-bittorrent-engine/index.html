@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<style type=text/css>body{font-family:monospace;}</style>
+	<title>Writing a Bittorrent engine in Rust</title>
+	
+	
+	<link rel="stylesheet" href="/css/style.css">
+	
+	
+</head>
+<body>
+	<header>
+	======================<br>
+	== <a href="/">mandreyel&#39;s blog</a> ==<br>
+	======================
+	<div style="float: right;">...this space is growing...</div><br>
+	<p>
+	<nav>
+			<a href="/"><b>Start</b></a>.
+			
+			
+			<a href="/posts/"><b>Posts</b></a>.
+			
+			<a href="/tags/"><b>Tags</b></a>.
+			
+	</nav>
+	</p>
+	
+</header>
+
+	
+	<main>
+		<article>
+			<h1>Writing a Bittorrent engine in Rust</h1>
+			<b><time>2020-12-26 00:00:00</time></b>
+		       
+		           <a href="/tags/rust">rust</a>
+        	       
+		           <a href="/tags/bittorrent">bittorrent</a>
+        	       
+
+			<div>
+				<p>This post recounts the journey of writing
+<a href="https://github.com/mandreyel/cratetorrent">cratetorrent</a>, interesting
+optimizations, and some of the insights gained.</p>
+<h2 id="prologue">Prologue</h2>
+<p>Growing up, torrenting was a big thing around me. I was always curious how it
+worked.</p>
+<p>This curiosity only increased after I had gotten into programming and
+started to understand the details. There is a piece of technology that is so
+effective yet simple, that, without any marketing, it gained widespread adoption
+due simply to sheer technical superiority. It just worked and people used it.</p>
+<p>So why not write one? I did, in C++. It didn&rsquo;t work out. Half-finished,
+unstable, not well tested. Let&rsquo;s forget it.</p>
+<p>Fast-forward a few years. I got into Rust and needed a familiar playground to
+practice the language. I did what anyone in such a situation would do: I wrote
+another torrent engine. It&rsquo;s torrent engines all the way back.</p>
+<p>Thus was cratetorrent born. The name is a wordplay on the C++
+<a href="https://github.com/arvidn/libtorrent"><code>libtorrent</code> library</a>. Its code and
+blog were highly educational during my first attempt. This is my thanks.</p>
+<h2 id="torrent-101">Torrent 101</h2>
+<p>So how <em>do</em> torrents work?</p>
+<p>A brief overview of the BitTorrent V1
+protocol follows. For those familiar, feel free to skip to the <a href="#interesting-optimizations">next
+section</a>.</p>
+<h3 id="what-is-it">What is it?</h3>
+<p>BitTorrent is a <em>mostly</em> decentralized file-sharing protocol: it consists of
+potentially many symmetrical clients exchanging arbitrary data.</p>
+<p>Its advantage over downloading from a single host is that the load is
+distributed among all participants in the torrent <em>swarm</em>, thereby increasing
+availability, scalability, and often download speed, too.</p>
+<p>It used to be highly popular, as everyone used it to share&hellip;Linux distros, yes,
+and other <em>definitely legal content</em>. Nowadays it&rsquo;s still in use, but its
+use cases are more subtle: e.g. Windows 10 uses BitTorrent, or something like
+it, to <a href="https://lifehacker.com/windows-10-uses-your-bandwidth-to-distribute-updates-d-1721091469">distribute
+updates</a>
+among its users.</p>
+<h3 id="whos-in-a-torrent">Who&rsquo;s in a torrent?</h3>
+<p>Torrent is not fully decentralized because at the start of the download
+a client needs to know which other clients it can download from. Such other
+clients in the torrent&rsquo;s <em>swarm</em> are called <em>peers</em>. Peers that have all the
+data are <em>seeds</em>, the rest are <em>leeches</em>. A bit of an uncomfortable term.</p>
+<p>At the beginning of a download, a client asks a central host about peers to
+bootstrap the download. These hosts are called <em>trackers</em>.<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> Then it
+connects some peers and begins downloading data.</p>
+<h3 id="data-representation">Data representation</h3>
+<p>A torrent archive may have one or more files. From the point of view of the wire
+protocol, however, they are all just one big contiguous sequence of bytes.</p>
+<p>This byte sequence is cut up into equal sized <em>pieces</em>, usually some multiple of
+16 KiB. Pieces are further cut up into 16 KiB <em>blocks</em>. Peers exchange these
+blocks of data and use them to reassemble the torrent&rsquo;s files.<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
+<p>Chunking up pieces enables downloading a piece concurrently from multiple peers,
+thereby potentially finishing the piece sooner. Since a client does not need to
+have the whole torrent to start sharing it with others, a finished piece can
+thus be immediately shared with other peers that don&rsquo;t yet have it. This increases
+availability, a key feature of the protocol.</p>
+<p>A tricky part here is that files are not padded to align with piece boundaries.</p>
+<p>
+<figure>
+  <img src="/images/data-repr.png" alt="data representation" />
+</figure>
+
+
+</p>
+<p>This has two consequences:</p>
+<ul>
+<li>the last piece may be smaller than the rest,</li>
+<li>and pieces may not align with file boundaries, both shown above.</li>
+</ul>
+<p>Therefore when writing blocks to disk, they may have to be split across several
+files. The logic can get quite gnarly here if done optimally.<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup></p>
+<h3 id="the-peer-protocol">The peer protocol</h3>
+<p>After the client connects to a peer via TCP, they exchange
+handshakes[^handshake]. Then, one or both of them tell the other that it can
+start to request blocks. The client then makes a request for a block in some
+piece it chose<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>, its peer sends it, the client saves it and requests
+another block. Repeat until finished.</p>
+<p>That&rsquo;s about it, but perhaps surprising no one, a real world implementation will
+be quite a bit more complex. Let&rsquo;s see some of the complications.</p>
+<h2 id="key-optimizations">Key optimizations</h2>
+<p>(So nothing premature, promise!)</p>
+<h3 id="download-pipelining">Download pipelining</h3>
+<p>A naive implementation might do what was outlined above: send requests
+sequentially, one after the previous request was served. The problem with it is
+that it doesn&rsquo;t utilize the connection&rsquo;s capacity.</p>
+<p>To do so, we try to estimate a connection&rsquo;s <a href="https://en.wikipedia.org/wiki/Bandwidth-delay_product">bandwidth-delay
+product</a> for each peer
+that the client is downloading from. This is the maximum amount of data that can
+be on the link at any given time&ndash;that is, the sent but not yet received bytes.</p>
+<p>So to get the best performance we keep as many requests outstanding as would
+fill the link&rsquo;s capacity.</p>
+<p>A picture makes this explanation a lot more pleasant:</p>
+<p>
+<figure>
+  <img src="/images/request-pipeline.png" alt="download pipelining benefits" />
+</figure>
+
+
+</p>
+<p>It&rsquo;s clearly visible that in the same amount of time, a lot more requests could
+be fulfilled. This is the number one most important optimization, strongly
+recommended by the spec itself.</p>
+<p>Cratetorrent uses a running average for the download rate and a simplified model
+of the BDP, by assuming the latency to be a constant 1 second, to get the
+request queue size:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#66d9ef">let</span> request_queue_size <span style="color:#f92672">=</span> download_rate <span style="color:#f92672">/</span> BLOCK_LEN;
+</code></pre></div><h3 id="slow-start">Slow start</h3>
+<p>The above suggests an interesting problem: what&rsquo;s the fastest way of
+arriving at the link&rsquo;s capacity? Taking time to get to this optimum number costs
+the client time. No good.</p>
+<p>It turns out that this is a solved problem. To find the answer we just have
+to peek one layer below in our conceptual network stack: <strong>TCP</strong>.</p>
+<p>When a TCP connection is set up, the protocol tries to find the right congestion
+window size. This is a fancy way of saying &ldquo;the number of bytes to send that
+doesn&rsquo;t choke the remote host and everything else in between but still makes use
+of the network capacity.&rdquo; Our purposes are similar.</p>
+<p>This is roughly what TCP does:</p>
+<ol>
+<li>At the start of the connection, set the congestion window size to some
+constant.</li>
+<li>Send an equivalent number of segments to peer.</li>
+<li>For each ACK (acknowledgement message) received, increase the window size by
+1.</li>
+</ol>
+<p>Each time all ACKs are received for a volley of segments, the window size
+doubles. This growth is exponential, yet the algorithm is confusingly called
+<a href="https://en.wikipedia.org/wiki/TCP_congestion_control#Slow_start">slow start</a>
+(presumably named after the thing it tries to avoid).</p>
+<p>TCP stops growing the window when the first timed out or dropped segment is
+detected. This would be difficult to replicate in user-space, so cratetorrent
+instead increases the request queue size every time a block is received, and
+<a href="https://github.com/mandreyel/cratetorrent/blob/master/cratetorrent/src/peer/state.rs#L300-L316">stops</a>
+when the download rate isn&rsquo;t increasing much anymore.<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup></p>
+<p>
+<figure>
+  <img src="/images/slow-start.png" alt="download pipelining benefits" />
+</figure>
+
+
+</p>
+<p>With each served request, more requests are sent, and the connection is getting
+closer to fully using the available bandwidth (the non-blue area is shrinking).</p>
+<h3 id="endgame-mode">Endgame mode</h3>
+<p>I noticed that sometimes the last phase of a download gets stagnant, barely
+progressing from one block to the next.</p>
+<p>This happens when the last pending pieces are downloaded from slow peers, which
+can delay the completion of a download by a surprising amount.<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup></p>
+<p>Similarly, this issue is also solved&ndash;mentioned in the spec, in fact:</p>
+<p>While normally blocks are requested from a single peer, blocks in the last
+pending pieces should be downloaded from all peers, on a &ldquo;whoever sends it
+first&rdquo; basis. Once they arrive, requests to the slower peers are simply
+cancelled. This wastes some bandwidth but saves quite a bit of time.</p>
+<hr>
+<p>These were the most significant design choices in terms of how they affected
+performance. There are a few more but neither you or I have forever. So let&rsquo;s
+move on and see how all this translates into Rust.</p>
+<h2 id="architecture">Architecture</h2>
+<p>Cratetorrent employs asynchronous IO on the network side, and a thread-pool
+backed blocking IO on the disk side. It uses
+<a href="https://github.com/tokio-rs/tokio">Tokio</a> for both, the de facto async IO
+runtime in Rust.</p>
+<p>The engine&rsquo;s main components are depicted here:</p>
+<p>
+<figure>
+  <img src="/images/archi.png" alt="architecture diagram" />
+</figure>
+
+
+</p>
+<p>Most of these are separate <a href="https://docs.rs/tokio/0.2.13/tokio/task">tasks</a>
+(essentially application level <a href="https://en.wikipedia.org/wiki/Green_threads">green
+threads</a>). Because tasks are
+as good as separate threads from the point of view of the borrow-checker, shared
+access is not permitted without synchronization. There are two ways to work
+around this.</p>
+<h3 id="task-event-loop">Task event loop</h3>
+<p>Control flow between tasks is primarily implemented via asynchronous <a href="https://en.wikipedia.org/wiki/Message_passing"><em>message
+passing</em></a>, using
+multiple-producer single-consumer
+<a href="https://tokio.rs/tokio/tutorial/channels"><em>channels</em></a>. Each task is
+reactive: it has an <em>event loop</em> and it reacts to internal events and messages
+from other tasks.</p>
+<p>Torrents and peer sessions perform a periodic &ldquo;tick&rdquo; (like the tick of a clock),
+once a second currently, to update their internal state and broadcast messages.
+This is when alerts (such as periodic download statistics or &ldquo;download
+complete&rdquo;) are sent to the library user for example.</p>
+<p>As an example, a torrent&rsquo;s event loop might look like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#66d9ef">loop</span> {
+    select<span style="color:#f92672">!</span> {
+        <span style="color:#75715e">// periodic tick
+</span><span style="color:#75715e"></span>        _ <span style="color:#f92672">=</span> loop_timer.select_next_some() <span style="color:#f92672">=&gt;</span> {
+            self.tick().<span style="color:#66d9ef">await</span><span style="color:#f92672">?</span>;
+        }
+        <span style="color:#75715e">// peers wanting to connect
+</span><span style="color:#75715e"></span>        peer_conn_result <span style="color:#f92672">=</span> incoming.select_next_some() <span style="color:#f92672">=&gt;</span> {
+            <span style="color:#66d9ef">if</span> <span style="color:#66d9ef">let</span> Ok(socket) <span style="color:#f92672">=</span> peer_conn_result {
+                self.handle_incoming_peer(socket)<span style="color:#f92672">?</span>;
+            }
+        }
+        <span style="color:#75715e">// commands from other parts of the engine
+</span><span style="color:#75715e"></span>        cmd <span style="color:#f92672">=</span> self.cmd_rx.select_next_some() <span style="color:#f92672">=&gt;</span> {
+            self.handle_cmd(cmd).<span style="color:#66d9ef">await</span><span style="color:#f92672">?</span>;
+        }
+    }
+}
+</code></pre></div><p>(<code>select!</code> is a macro that waits on all streams and returns the item produced by
+the first ready stream. And streams are just types that eventually produce a
+<em>stream</em> of values over time.)</p>
+<p>Another component in the engine might send it a message like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust">torrent_cmd_tx.send(torrent::Command::PieceCompletion(Ok(piece)))<span style="color:#f92672">?</span>;
+</code></pre></div><p>And that&rsquo;s pretty much it. This approach cleanly separates concerns and makes it
+a breeze to scale the code. But in rare cases it is not the most ergonomic way.</p>
+<h3 id="shared-data-channels-or-locking">Shared data: channels or locking?</h3>
+<p>While most tasks are concerned with their own data, peer sessions in a torrent
+need to access and mutate a part of the torrent state.</p>
+<p>For read-only data (which is the bulk of it), this is a simple <code>Arc</code> away. But
+for shared mutable access, this was not so clear when
+I started writing this: do I use
+<a href="https://docs.rs/tokio/0.2.16/tokio/sync/struct.RwLock.html">locks</a>
+or full channel round-trips?</p>
+<p>To be more concrete, the two entities in question:</p>
+<ul>
+<li><strong>piece picker</strong>: keeps track of which pieces we have and which one to pick
+next. Peer sessions need to interact with it all the time to pick the next
+piece from peer.</li>
+<li><strong>piece downloads</strong>: keeps track of pending downloads. Peer sessions use it to
+continue existing downloads and to administer received blocks.</li>
+</ul>
+<p>While it would be possible to keep these in torrent and let peer sessions use
+messages to manipulate them, but since they are used in many places, it is more
+straightforward to use locks.</p>
+<p>I did not trust my intuition so I set up some synthetic benchmarks to simulate
+the two approaches. While not exactly representing the real world, I wanted to
+have a rough idea to help guide my decision.</p>
+<p>It was simple: spawn the specified number of tasks, let each simulate
+a request one block at a time, delay the task some amount of time until
+&ldquo;receiving&rdquo; the block, and finally sending a notification to the main task for
+administration. Then repeat until all pieces are &ldquo;downloaded.&rdquo; These steps made
+use of the piece picker and the pending downloads in various steps.</p>
+<p>The results:</p>
+<ul>
+<li>If the delay was set to 0, channels left locks in the dust. The difference was
+especially drastic as the number of tasks grew.</li>
+<li>But surprisingly, with as little as 10ms of a delay, the results were pretty
+much even, up until about 500 tasks.</li>
+</ul>
+<p>After that, channels started to emerge victorious even if a delay was set. Thus
+a takeaway here (and not just for Rust): if you need <em>very</em> high concurrency,
+message passing is the way to go.<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup></p>
+<p>However, I ended up going with the lock based solution, for a few reasons:</p>
+<ul>
+<li>It&rsquo;s not expected to have much more than a 100 peers per torrent. Most clients
+set a default of 50. So if this solution scales till around 500, I considered
+that good enough, for the MVP anyway.</li>
+<li>There is actually an additional not so trivial to simulate logic around
+downloads: timeouts and salvaging late blocks. It is outside the scope to
+explain now, but it meant accessing to the above data in other places too,
+which would have made a channels based implementation more convoluted.</li>
+</ul>
+<h3 id="disk-io">Disk IO</h3>
+<p>I mentioned that reading from and writing to disk uses blocking IO. Why not
+<code>tokio::fs</code> (which provides async versions of the standard lib equivalent),
+you may ask? This requires a little explanation&hellip;</p>
+<p>While I tried not to make excessive premature optimizations, a torrent client <em>is</em>
+the type of application where performance matters: besides actually downloading
+things, the second most important thing is that it does so <em>as fast as
+possible</em>.</p>
+<p>Therefore I made some assumptions to drive my decisions, which I believe are
+sensible:</p>
+<ul>
+<li>Context switching and thus syscalls are expensive, and has become even more so
+due to speculative execution mitigations as of late. Use batching where
+possible.</li>
+<li>However, if possible, avoid copying block buffers, of which there could be
+many. Copying many 16 KiB buffers is an unwanted cost.</li>
+</ul>
+<p>Thus downloaded blocks of a piece are queued in a write buffer and are
+only written to disk once the piece is complete. This happens using a single
+syscall and without additional buffer copies, using <em>positional vectored IO</em>:
+<a href="https://linux.die.net/man/2/pwritev"><code>pwritev</code></a>.</p>
+<p>This kernel API allows writing a list of byte buffers at a given position in the
+file in one atomic operation.<sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> There is no need to seek, nor
+is there one to write each block separately, or to coalesce buffers into a
+single buffer to be able to do a single write.<sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup></p>
+<p>An interesting discussion around this has evolved on
+<a href="https://www.reddit.com/r/rust/comments/kiah3q/i_wrote_cratetorrent_a_bittorrent_engine_in_rust/ggprwcd">reddit</a>.</p>
+<h2 id="how-do-i-test-this">How do I test this?</h2>
+<p>Was the first thing I asked myself before starting. I wasn&rsquo;t sure
+how to do end-to-end integration and functional testing most easily.</p>
+<p>The reason my younger self&rsquo;s first stab at this fell apart is because I hadn&rsquo;t
+set up proper testing. I knew better now.</p>
+<p>Since I was planning to iterate in small steps, I knew I wouldn&rsquo;t have the full
+feature set necessary to test cratetorrent against another cratetorrent instance
+(requires basically all features present in the MVP). This is what I did:</p>
+<ul>
+<li>I used Docker to create a virtual LAN on my localhost in which I could spawn
+containers that acted as disparate hosts.</li>
+<li>This is great because it&rsquo;s easy to automate and reproduce.</li>
+<li>I took a well known torrent client (Transmission), spawned some instances of
+it to act as seeds, and connected them with my cratetorrent client.</li>
+</ul>
+<p>I set this up before writing any of the Rust code. Once I got rolling,
+actually testing exchanging handshakes, sending protocol messages, then a
+partial download, and not long after a full download, were all effortless.</p>
+<p>This has worked wonderfully. It allowed me to focus on one feature at a time,
+and leading to fast iteration with the reassurance that the tests got my
+back. For example, I added seeding quite late in the process yet I was able to
+test full downloads way before that.</p>
+<p>Another benefit was that even though everything was local and mostly
+reproducible, I was still testing against a real-world client. This meant that
+it ensured that my implementation was compatible with the rest of the ecosystem.</p>
+<p>If you&rsquo;re curious how this was all setup, you can check it out
+<a href="https://github.com/mandreyel/cratetorrent/tree/master/tests">here</a>.</p>
+<h2 id="result">Result</h2>
+<p>It&rsquo;s nothing to write home about (although arguably that&rsquo;s exactly what I&rsquo;m
+doing), but without any micro-optimization, only a little profiling, and mostly
+just sane architectural decisions, the performance is quite good out of the
+gate.</p>
+<p>A real-life download of Ubuntu 20.04 (~2.8 GB), which is a well seeded torrent,
+downloading from 40-50 peers, comes down at ~9 MBps on my network that has
+roughly that much capacity. Quite good, but it doesn&rsquo;t tell us much as my ISP is
+the limiting factor here, not cratetorrent.</p>
+<p>To test the theoretical limits, I created a larger, ~10 GiB torrent and ran an
+instance of a seed and a leech on my localhost. This cuts out the limitations
+imposed by the network and the network card, using only the virtual loopback
+device.</p>
+<p>The result is 160-200 MBps on the first run, and 270 MBps on the second. The
+large disparity is likely due to the kernel page cache and the cratetorrent read
+cache incurring some overhead while filling up. However, CPU usage on the seed is
+<em>very</em> high. Profiling points to the disk read function where half of the CPU
+time is taken up by <code>preadv</code> and the other by <code>__memset_avgx2__erms</code>.
+I have a suspicion as to what this might be but I&rsquo;ll leave this for another
+time.</p>
+<hr>
+<p>Out of curiosity, I did the same by running cratetorrent against a single
+Transmission seed (in Docker). The download rate maxed out at 35 MBps. I
+expected&hellip;a lot more. Docker networking on Linux should not have noticeable
+overhead  and I had upload rate limits disabled. So I&rsquo;m not sure if Transmission
+is that much slower or if there is anything else I missed.</p>
+<p>But this is by no means meant to be a shootout. Maybe one day I will return
+to a more thorough performance showdown that includes other clients&hellip;including
+libtorrent. :)</p>
+<h2 id="you-can-try-it-out">You can try it out!</h2>
+<p>Really! There is both a crate (or library), as well as a <em>very</em> anemic CLI app.</p>
+<p>However, there are some notable <strong>limitations</strong>:</p>
+<ul>
+<li>It only works on Linux at the moment, due to the above mentioned use of
+Linux-only syscalls.<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup></li>
+<li>It&rsquo;s also missing many features that a fully baked torrent client would have.
+Use <code>libtorrent</code> or something else if you want a battle tested solution.</li>
+</ul>
+<h2 id="whats-next">What&rsquo;s next?</h2>
+<p>There is a lot more to come: profiling and optimizing, discussing other
+interesting aspects of both cratetorrent and tokio based apps in general, many
+features, and more.</p>
+<p>Stay tuned!</p>
+<hr>
+<section class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1" role="doc-endnote">
+<p>Nowadays trackers are largely replaced by a <em>distributed hash-table</em>, or
+DHT, a decentralized data-store which in the case of BitTorrent, contains
+peers and the torrents that they have available. But even that needs to be
+bootstrapped on the first run. <a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2" role="doc-endnote">
+<p>It&rsquo;s interesting that the spec doesn&rsquo;t specify this 16 KiB size,
+it simply says that this tends to be the value used. So much so that in
+practice clients deal exclusively in these blocks and will probably reject
+requests for blocks with different sizes.
+I&rsquo;m not quite sure why exactly 16
+KiB. With today&rsquo;s internet speeds, this value seems a little on the lower end.
+It was presumably chosen to match internet speeds at the time BitTorrent was
+created, some 20 years ago. <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3" role="doc-endnote">
+<p>The <a href="https://www.bittorrent.org/beps/bep_0052.html">BitTorrent
+V2</a> addresses this and pads
+files. 20 years late but still welcome. <a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4" role="doc-endnote">
+<p>Usually peers pick the pieces that are the least available in the
+swarm, to&ndash;again&ndash;increase availability. <a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:5" role="doc-endnote">
+<p>The idea is from libtorrent. <a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:6" role="doc-endnote">
+<p>Really. With some tests the last few pieces took a staggering 30% of
+the overall download time! <a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:7" role="doc-endnote">
+<p>We&rsquo;re talking differences of 150ms versus 25s for large
+number of tasks (in favor of channels). This is not so surprising, however:
+since the actual work done is very little, when there is no delay or the
+number of tasks is very high, most of the time among tasks is spent contending
+for locks. This doesn&rsquo;t scale because the more tasks there are, less CPU time
+is given to each as they all need to work on the same data. Even worse,
+with each mutation, CPUs have to synchronize their caches, further slowing
+down the program. Whereas with the channels based solution, the data is only
+ever mutated by one CPU, therefor no cache pollution occurs. And sending
+messages via channels is very cheap as, depending on the channel
+implementation, it most likely uses a lock-free queue, making it
+probably the only place that CPUs have to synchronize among each other. <a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:8" role="doc-endnote">
+<p>However, the kernal APIs don&rsquo;t guarantee
+writing the full contents of all buffers to disk. Therefore most
+implementations, including cratetorrent, call <code>pwritev</code> repeatedly until all
+bytes are written. <a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:9" role="doc-endnote">
+<p>There is also
+<a href="https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write"><code>Write::write_all_vectored</code></a>,
+but it still requires a seek, and while cross-platform, on Windows it is
+actually just a shim over calling <code>Write::write</code> repeatedly, which is most
+probably worse than just copying the blocks into a single buffer and performing
+a single read (due to the cumulative cost of repeatedly context switching into
+the kernel). <a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:10" role="doc-endnote">
+<p>It&rsquo;s fairly easy to feature-gate these to Linux and use a
+different fallback on other platforms. I didn&rsquo;t want to complicate this MVP,
+but I&rsquo;ll probably do this soon. <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</section>
+			</div>
+		</article>
+	</main>
+<aside>
+	<div>
+		<div>
+			<h3>LATEST POSTS</h3>
+		</div>
+		<div>
+			<ul>
+				
+				<li><a href="/posts/rust-bittorrent-engine/">Writing a Bittorrent engine in Rust</a></li>
+				
+				<li><a href="/posts/fav-vim-settings/">Cool Vim Settings</a></li>
+				
+				<li><a href="/posts/servo-internals-load-url/">Servo Internals: Loading Pages</a></li>
+				
+				<li><a href="/posts/servo-internals/">Servo Internals</a></li>
+				
+			</ul>
+		</div>
+	</div>
+</aside>
+
+
+	<footer>
+	<p>&copy; 2020 <a href="/"><b>mandreyel&#39;s blog</b></a>.
+	<a href="https://github.com/mandreyel"><b>Github</b></a>.
+	</p>
+</footer>
+
+</body>
+</html>

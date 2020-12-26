@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Tags on mandreyel&#39;s blog</title>
@@ -6,35 +6,40 @@
     <description>Recent content in Tags on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Sep 2018 23:47:55 +0200</lastBuildDate>
-    
-	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
-    
+    <lastBuildDate>Sat, 26 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>bittorrent</title>
+      <link>/tags/bittorrent/</link>
+      <pubDate>Sat, 26 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/bittorrent/</guid>
+      <description></description>
+    </item>
     
     <item>
-      <title>Rust</title>
+      <title>rust</title>
       <link>/tags/rust/</link>
-      <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
+      <pubDate>Sat, 26 Dec 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/rust/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>Servo</title>
-      <link>/tags/servo/</link>
-      <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
-      
-      <guid>/tags/servo/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Vim</title>
+      <title>vim</title>
       <link>/tags/vim/</link>
       <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
       
       <guid>/tags/vim/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>servo</title>
+      <link>/tags/servo/</link>
+      <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
+      
+      <guid>/tags/servo/</guid>
       <description></description>
     </item>
     

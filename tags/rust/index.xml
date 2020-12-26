@@ -1,29 +1,34 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rust on mandreyel&#39;s blog</title>
+    <title>rust on mandreyel&#39;s blog</title>
     <link>/tags/rust/</link>
-    <description>Recent content in Rust on mandreyel&#39;s blog</description>
+    <description>Recent content in rust on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Sep 2018 23:47:55 +0200</lastBuildDate>
-    
-	<atom:link href="/tags/rust/index.xml" rel="self" type="application/rss+xml" />
-    
+    <lastBuildDate>Sat, 26 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/rust/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Writing a Bittorrent engine in Rust</title>
+      <link>/posts/rust-bittorrent-engine/</link>
+      <pubDate>Sat, 26 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/posts/rust-bittorrent-engine/</guid>
+      <description>&lt;p&gt;This post recounts the journey of writing
+&lt;a href=&#34;https://github.com/mandreyel/cratetorrent&#34;&gt;cratetorrent&lt;/a&gt;, interesting
+optimizations, and some of the insights gained.&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>Servo Internals: Loading Pages</title>
-      <link>/post/servo-internals-load-url/</link>
+      <link>/posts/servo-internals-load-url/</link>
       <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
       
-      <guid>/post/servo-internals-load-url/</guid>
+      <guid>/posts/servo-internals-load-url/</guid>
       <description>&lt;p&gt;This blog post is part of a
 &lt;a href=&#34;/post/servo-internals/&#34;&gt;series&lt;/a&gt; I&amp;rsquo;m doing on Servo.
 It&amp;rsquo;s a deep dive into how Servo loads a page given a URL.
 Please note, though, that it is still heavily work-in-progress. Some details may
-be missing or incorrect.&lt;/p&gt;
-
-&lt;p&gt;&lt;/p&gt;</description>
+be missing or incorrect.&lt;/p&gt;</description>
     </item>
     
   </channel>

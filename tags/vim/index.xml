@@ -1,27 +1,21 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Vim on mandreyel&#39;s blog</title>
+    <title>vim on mandreyel&#39;s blog</title>
     <link>/tags/vim/</link>
-    <description>Recent content in Vim on mandreyel&#39;s blog</description>
+    <description>Recent content in vim on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 20 Sep 2018 21:49:45 +0200</lastBuildDate>
-    
-	<atom:link href="/tags/vim/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 20 Sep 2018 21:49:45 +0200</lastBuildDate><atom:link href="/tags/vim/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Cool Vim Settings</title>
-      <link>/post/fav-vim-settings/</link>
+      <link>/posts/fav-vim-settings/</link>
       <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
       
-      <guid>/post/fav-vim-settings/</guid>
+      <guid>/posts/fav-vim-settings/</guid>
       <description>&lt;p&gt;A collection of some useful and not-so-obvious things you can do with vim,
 taken from my
-&lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;&lt;/p&gt;</description>
+&lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
   </channel>

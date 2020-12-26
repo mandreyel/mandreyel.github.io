@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>mandreyel&#39;s blog</title>
@@ -6,52 +6,53 @@
     <description>Recent content on mandreyel&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 20 Sep 2018 21:49:45 +0200</lastBuildDate>
-    
-	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
-    
+    <lastBuildDate>Sat, 26 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Writing a Bittorrent engine in Rust</title>
+      <link>/posts/rust-bittorrent-engine/</link>
+      <pubDate>Sat, 26 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/posts/rust-bittorrent-engine/</guid>
+      <description>&lt;p&gt;This post recounts the journey of writing
+&lt;a href=&#34;https://github.com/mandreyel/cratetorrent&#34;&gt;cratetorrent&lt;/a&gt;, interesting
+optimizations, and some of the insights gained.&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>Cool Vim Settings</title>
-      <link>/post/fav-vim-settings/</link>
+      <link>/posts/fav-vim-settings/</link>
       <pubDate>Thu, 20 Sep 2018 21:49:45 +0200</pubDate>
       
-      <guid>/post/fav-vim-settings/</guid>
+      <guid>/posts/fav-vim-settings/</guid>
       <description>&lt;p&gt;A collection of some useful and not-so-obvious things you can do with vim,
 taken from my
-&lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;&lt;/p&gt;</description>
+&lt;a href=&#34;https://github.com/mandreyel/dotfiles/blob/master/vim/.vimrc&#34;&gt;vimrc&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Servo Internals: Loading Pages</title>
-      <link>/post/servo-internals-load-url/</link>
+      <link>/posts/servo-internals-load-url/</link>
       <pubDate>Sat, 15 Sep 2018 23:47:55 +0200</pubDate>
       
-      <guid>/post/servo-internals-load-url/</guid>
+      <guid>/posts/servo-internals-load-url/</guid>
       <description>&lt;p&gt;This blog post is part of a
 &lt;a href=&#34;/post/servo-internals/&#34;&gt;series&lt;/a&gt; I&amp;rsquo;m doing on Servo.
 It&amp;rsquo;s a deep dive into how Servo loads a page given a URL.
 Please note, though, that it is still heavily work-in-progress. Some details may
-be missing or incorrect.&lt;/p&gt;
-
-&lt;p&gt;&lt;/p&gt;</description>
+be missing or incorrect.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Servo Internals</title>
-      <link>/post/servo-internals/</link>
+      <link>/posts/servo-internals/</link>
       <pubDate>Sat, 15 Sep 2018 23:44:50 +0200</pubDate>
       
-      <guid>/post/servo-internals/</guid>
+      <guid>/posts/servo-internals/</guid>
       <description>&lt;p&gt;I recently started contributing to Mozilla&amp;rsquo;s
-  &lt;a href=&#34;https://github.com/servo/servo&#34;&gt;Servo&lt;/a&gt;, and I take a lot of notes while
-  walking through the code base. I decided to furnish them with explanations and
-  put them online&amp;ndash;primarily for myself as future reference, but also in hopes
-  that it may be useful for others.&lt;/p&gt;
-
-&lt;p&gt;&lt;/p&gt;</description>
+&lt;a href=&#34;https://github.com/servo/servo&#34;&gt;Servo&lt;/a&gt;, and I take a lot of notes while
+walking through the code base. I decided to furnish them with explanations and
+put them online&amp;ndash;primarily for myself as future reference, but also in hopes
+that it may be useful for others.&lt;/p&gt;</description>
     </item>
     
   </channel>
