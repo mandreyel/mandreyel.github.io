@@ -213,15 +213,19 @@ move on and see how all this translates into Rust.</p>
 backed blocking IO on the disk side. It uses
 <a href="https://github.com/tokio-rs/tokio">Tokio</a> for both, the de facto async IO
 runtime in Rust.</p>
-<p>The engine&rsquo;s main components are depicted here:</p>
-<p>
-<figure>
-  <img src="/images/cratetorrent-archi.svg" alt="architecture diagram" />
-</figure>
-
-
-</p>
-<p>Most of these are separate <a href="https://docs.rs/tokio/0.2.13/tokio/task">tasks</a>
+<p>The engine&rsquo;s main components are:</p>
+<ul>
+<li>The <strong>engine</strong> itself, which manages torrents and executes the library user&rsquo;s
+commands.</li>
+<li>One or more <strong>torrents</strong>, each corresponding to a single torrent
+upload/download. They manage their peers and trackers.</li>
+<li>Torrents have an arbitrary number of <strong>peer sessions</strong>, which represent
+connections with peers from start to finish. This entity implements the
+BitTorrent wire protocol and is as such on the lowest layer.</li>
+<li><strong>Disk IO</strong> is handled by an entity of its own, for clarity and separation of
+concerns.</li>
+</ul>
+<p>All of these are separate <a href="https://docs.rs/tokio/0.2.13/tokio/task">tasks</a>
 (essentially application level <a href="https://en.wikipedia.org/wiki/Green_threads">green
 threads</a>). Because tasks are
 as good as separate threads from the point of view of the borrow-checker, shared
