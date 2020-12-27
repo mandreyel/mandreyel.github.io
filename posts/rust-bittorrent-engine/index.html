@@ -65,7 +65,7 @@ blog were highly educational during my first attempt. This is my thanks.</p>
 <h2 id="torrent-101">Torrent 101</h2>
 <p>So how <em>do</em> torrents work?</p>
 <p>A brief overview of the BitTorrent V1
-protocol follows. For those familiar, feel free to skip to the <a href="#interesting-optimizations">next
+protocol follows. For those familiar, feel free to skip to the <a href="#key-optimizations">next
 section</a>.</p>
 <h3 id="what-is-it">What is it?</h3>
 <p>BitTorrent is a <em>mostly</em> decentralized file-sharing protocol: it consists of
@@ -369,7 +369,7 @@ also the exact capacity of my downlink, so this doesn&rsquo;t tell us much.</p>
 <p>Testing on localhost, with a single cratetorrent seed and leech, the current
 limit seems to be around 270 MBps. This value is from the second run, making use
 of the seed&rsquo;s saturated read cache. The first run fluctuated in the range
-of 160-200 MBps.</p>
+of 160-200 MBps.<sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></p>
 <p>However, CPU usage on the seed is <em>very</em> high. Profiling points to the disk read
 function where half of the CPU time is taken up by <code>preadv</code> and the other by
 <code>__memset_avgx2__erms</code>. I have a suspicion as to what this might be but I&rsquo;ll
@@ -386,15 +386,17 @@ libtorrent. :)</p>
 <p>However, there are some notable <strong>limitations</strong>:</p>
 <ul>
 <li>It only works on Linux at the moment, due to the above mentioned use of
-Linux-only syscalls.<sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></li>
-<li>It&rsquo;s also missing many features that a fully baked torrent client would have.
-Use <code>libtorrent</code> or something else if you want a battle tested solution.</li>
+Linux-only syscalls.<sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></li>
+<li>It&rsquo;s missing many features that a fully baked torrent client would have.</li>
+<li>There are no facilities to <em>limit</em> resource usage (e.g. backpressure or rate
+limiting), so it may not be suitable for slow systems.</li>
 </ul>
+<p>Use <code>libtorrent</code> or something else if you want a battle tested solution.</p>
 <h2 id="whats-next">What&rsquo;s next?</h2>
 <p>There is a lot more to come: profiling and optimizing, discussing other
 interesting aspects of both cratetorrent and tokio based apps in general, many
 features, and more.</p>
-<p>Stay tuned.<sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></p>
+<p>Stay tuned.<sup id="fnref:13"><a href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup></p>
 <hr>
 <section class="footnotes" role="doc-endnotes">
 <hr>
@@ -469,13 +471,20 @@ a single write (due to the cumulative cost of repeatedly context switching into
 kernel-space). <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:11" role="doc-endnote">
-<p>It&rsquo;s fairly easy to feature-gate these to Linux and use a
-different fallback on other platforms. I didn&rsquo;t want to complicate this MVP,
-but I&rsquo;ll probably do this soon. <a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>I was asked on reddit whether the current design is
+theoretically suitable for gigabit thruputs (125 MBps). It seems so! But it is
+unlikely in practice: finding a seed that can push these numbers, ISP
+throttling, slow networking hardware, etc. But I&rsquo;m confident I can take this
+even further&ndash;as said, the code hasn&rsquo;t really been optimized. What about <em>gigabyte</em> thruputs? <a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:12" role="doc-endnote">
+<p>It&rsquo;s fairly easy to feature-gate these to Linux and use a
+different fallback on other platforms. I didn&rsquo;t want to complicate this MVP,
+but I&rsquo;ll probably do this soon. <a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:13" role="doc-endnote">
 <p>E.g. you can add this blog to your RSS reader, but I&rsquo;ll also
-be posting to reddit.com/r/rust and news.ycombinator.com. <a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+be posting to reddit.com/r/rust and news.ycombinator.com. <a href="#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
 </section>
