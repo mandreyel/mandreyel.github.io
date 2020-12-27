@@ -88,16 +88,16 @@ data are <em>seeds</em>, the rest are <em>leeches</em>. A bit of an uncomfortabl
 bootstrap the download. These hosts are called <em>trackers</em>.<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> Then it
 connects some peers and begins downloading data.</p>
 <h3 id="data-representation">Data representation</h3>
-<p>A torrent archive may have one or more files. From the point of view of the wire
-protocol, however, they are all just one big contiguous sequence of bytes.</p>
-<p>This byte sequence is cut up into equal sized <em>pieces</em>, usually some multiple of
-16 KiB. Pieces are further cut up into 16 KiB <em>blocks</em>. Peers exchange these
-blocks of data and use them to reassemble the torrent&rsquo;s files.<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
-<p>Peers can only share with each other the complete pieces they have. However,
-breaking a piece up into blocks enables downloading it from multiple peers,
-thereby potentially completing it sooner. Once complete, the peer can
-immediately share it with other peers, even if it does not have all pieces
-itself. This increases availability, a key feature of the protocol.</p>
+<p>A torrent archive may have one or more files but from the point of view of the
+wire protocol they are all just one big contiguous sequence of bytes.</p>
+<p>This byte sequence is cut up into equal sized <em>pieces</em>, which are further cut up
+into 16 KiB <em>blocks</em>. Peers exchange these blocks of data and use them to
+reassemble the torrent&rsquo;s files.<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
+<p>A peer can only share the complete pieces it has. However, breaking up a piece
+into blocks enables downloading it from multiple peers, potentially
+completing it sooner. Once complete, the peer can immediately share it with
+other peers, even if it does not have all pieces itself. This increases
+availability, a key feature of the protocol.</p>
 <p>A tricky part here is that files are not padded to align with piece boundaries.</p>
 <p>
 <figure>
@@ -193,7 +193,7 @@ progressing from one block to the next.</p>
 <p>This happens when the last pending pieces are downloaded from slow peers, which
 can delay the completion of a download by a surprising amount.<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup></p>
 <p>Similarly, this issue is also solved&ndash;mentioned in the spec, in fact:</p>
-<p>While normally blocks are requested from a single peer, blocks in the last
+<p>While normally each block is requested from a single peer, blocks in the last
 pending pieces should be downloaded from all peers, on a &ldquo;whoever sends it
 first&rdquo; basis. Once they arrive, requests to the slower peers are simply
 cancelled. This wastes some bandwidth but saves quite a bit of time.</p>
@@ -258,14 +258,14 @@ the first ready stream. And streams are just types that eventually produce a
 a breeze to scale the code. But in rare cases it is not the most ergonomic way.</p>
 <h3 id="shared-data-channels-or-locking">Shared data: channels or locking?</h3>
 <p>While most tasks are concerned with their own data, peer sessions in a torrent
-need to access and mutate a part of the torrent state.</p>
+need to access or mutate a part of the torrent state.</p>
 <p>For read-only shared data (which is the majority), this is a simple <code>Arc</code> away.
 But for shared mutable access, this was not so clear when
 I started writing this: do I use
 <a href="https://docs.rs/tokio/0.2.16/tokio/sync/struct.RwLock.html">locks</a>
 or full channel round-trips?</p>
-<p>To be more concrete, the two entities in question that peer sessions need to
-interact with all the time:</p>
+<p>To be more concrete, the two entities that peer sessions need to interact with
+all the time:</p>
 <ul>
 <li><strong>piece picker</strong>: keeps track of what is already downloaded and is used by
 all sessions to choose which piece to download next.</li>
@@ -284,8 +284,7 @@ have a rough idea to help guide my decision.</p>
 a &ldquo;request&rdquo; one block at a time, delay the task some amount of time while
 &ldquo;receiving&rdquo; the block, and finally sending a notification to the main task for
 administration. Then repeat until all pieces are &ldquo;downloaded.&rdquo; (No actual network
-IO took place, hence the quotes.) These steps made use of the piece picker
-and the pending downloads in various steps.</p>
+IO took place, hence the quotes.)</p>
 <p>The results:</p>
 <ul>
 <li>If the delay was set to 0, channels left locks in the dust. The difference was
@@ -303,8 +302,8 @@ set a default of 50. So if this solution scales till around 500, I considered
 that good enough, for the MVP anyway.</li>
 <li>There is actually an additional not so trivial to simulate logic around
 downloads: timeouts and salvaging late blocks. It is outside the scope to
-explain now, but it meant accessing the above data in other places too, which
-would have made a channels based implementation more convoluted.</li>
+explain, but it meant accessing the above data in other places that
+would have made a channels based solution more convoluted.</li>
 </ul>
 <h3 id="disk-io">Disk IO</h3>
 <p>I mentioned that reading from and writing to disk uses blocking IO. Why not
@@ -317,11 +316,11 @@ possible</em>.</p>
 <p>In line with this, I made two assumptions to drive my decisions, which I believe
 are sensible:</p>
 <ul>
-<li>Many context switches (and syscalls) are expensive, and has become even more
+<li>Many context switches (and syscalls) are expensive and have become even more
 so due to speculative execution mitigations as of late. Use batching where
 possible.</li>
-<li>However, if possible, avoid copying block buffers, of which there could be
-many. Copying many 16 KiB buffers is an unnecessary cost.</li>
+<li>Avoid copying block buffers, of which there could be many. Copying many 16 KiB
+buffers is an unnecessary cost.</li>
 </ul>
 <p>Thus downloaded blocks of a piece are queued in a write buffer and are
 only written to disk once the piece is complete. This happens using a single
@@ -351,10 +350,9 @@ it to act as seeds, and connected them with my cratetorrent client.</li>
 <p>I set this up before writing any of the Rust code. Once I got rolling,
 actually testing exchanging handshakes, sending protocol messages, then a
 partial download, and not long after a full download, were all effortless.</p>
-<p>This has worked wonderfully. It allowed me to focus on one feature at a time,
-and leading to fast iteration with the reassurance that the tests got my
-back. For example, I added seeding quite late in the process yet I was able to
-test full downloads way before that.</p>
+<p>This has worked wonderfully. It allowed me to focus on one feature at a time
+which resulted in rapid iteration. For example, I added seeding quite late in
+the process yet I was able to test full downloads way before that.</p>
 <p>Another benefit was that even though everything was local and mostly
 reproducible, I was still testing against a real world client. This meant that
 it ensured that my implementation was compatible with the rest of the ecosystem.</p>
@@ -367,11 +365,11 @@ just sane architectural decisions, the performance is quite good out of the
 gate.</p>
 <p>A real-life download of Ubuntu 20.04 (~2.8 GB), which is a well seeded torrent,
 downloading from 40-50 peers, comes down at ~9 MBps on my network. But that&rsquo;s
-also the exact capacity of my downlink. Quite good, but it doesn&rsquo;t tell us much.</p>
+also the exact capacity of my downlink, so this doesn&rsquo;t tell us much.</p>
 <p>Testing on localhost, with a single cratetorrent seed and leech, the current
 limit seems to be around 270 MBps. This value is from the second run, making use
 of the seed&rsquo;s saturated read cache. The first run fluctuated in the range
-160-200 MBps.</p>
+of 160-200 MBps.</p>
 <p>However, CPU usage on the seed is <em>very</em> high. Profiling points to the disk read
 function where half of the CPU time is taken up by <code>preadv</code> and the other by
 <code>__memset_avgx2__erms</code>. I have a suspicion as to what this might be but I&rsquo;ll
@@ -467,8 +465,8 @@ bytes are written. <a href="#fnref:9" class="footnote-backref" role="doc-backlin
 but it still requires a seek, and while cross-platform, on Windows it is
 actually just a shim over calling <code>Write::write</code> repeatedly, which is most
 probably worse than just copying the blocks into a single buffer and performing
-a single read (due to the cumulative cost of repeatedly context switching into
-the kernel). <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+a single write (due to the cumulative cost of repeatedly context switching into
+kernel-space). <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:11" role="doc-endnote">
 <p>It&rsquo;s fairly easy to feature-gate these to Linux and use a
