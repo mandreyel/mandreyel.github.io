@@ -54,8 +54,8 @@ worked.</p>
 details. There is a piece of technology that is so effective yet simple, that,
 without any marketing, it gained widespread adoption due to sheer technical
 superiority. It just worked and people used it.</p>
-<p>So why not write one? I did, in C++. It didn&rsquo;t work out. Half-finished,
-unstable, not well tested. Let&rsquo;s forget it.</p>
+<p>So why not write one? I tried, in C++. It was never finished and it&rsquo;s probably
+better that way. Let&rsquo;s forget it.</p>
 <p>Fast-forward a few years. I got into Rust and needed a familiar playground to
 practice the language. I did what anyone in such a situation would do: I wrote
 another torrent engine. It&rsquo;s torrent engines all the way back.</p>
@@ -80,16 +80,21 @@ it, to <a href="https://lifehacker.com/windows-10-uses-your-bandwidth-to-distrib
 updates</a>
 among its users.</p>
 <h3 id="whos-in-a-torrent">Who&rsquo;s in a torrent?</h3>
-<p>BitTorrent is not fully decentralized because at the start of the download
-a client needs to know which other clients it can download from. Such other
-clients in the torrent&rsquo;s <em>swarm</em> are called <em>peers</em>. Peers that have all the
-data are <em>seeds</em>, the rest are <em>leeches</em>. A bit of an uncomfortable term.</p>
-<p>At the beginning of a download, a client asks a central host about peers to
-bootstrap the download. These hosts are called <em>trackers</em>.<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> Then it
-connects some peers and begins downloading data.</p>
+<p>The first actor on the stage is the torrent <em>metainfo</em> file. It contains basic
+metadata about the torrent, most importantly its name, its files with their
+paths and lengths, and its <em>trackers</em>. These files are usually hosted by
+torrenting sites and this is what you download when starting a torrent.</p>
+<p>So what are these trackers? While the download of the content itself is fully
+decentralized, a client needs to know which other clients it can download from.
+Such other clients in the torrent&rsquo;s <em>swarm</em> are called <em>peers</em>. Peers that have
+all the data are <em>seeds</em>, the rest are <em>leeches</em>. A bit of an uncomfortable
+term.</p>
+<p>Therefore at the beginning of a download a client asks trackers about
+peers. Trackers are the only centralized part of the protocol.<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> Once done,
+the client connects these peers and begins downloading data.</p>
 <h3 id="data-representation">Data representation</h3>
-<p>A torrent archive may have one or more files but from the point of view of the
-wire protocol they are all just one big contiguous sequence of bytes.</p>
+<p>A torrent may have one or more files but from the point of view of the wire
+protocol they are all just one big contiguous sequence of bytes.</p>
 <p>This byte sequence is cut up into equal sized <em>pieces</em>, which are further cut up
 into 16 KiB <em>blocks</em>. Peers exchange these blocks of data and use them to
 reassemble the torrent&rsquo;s files.<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
@@ -114,15 +119,17 @@ availability, a key feature of the protocol.</p>
 <p>Therefore when writing blocks to disk, they may have to be split across several
 files. The logic can get quite gnarly here if done optimally.<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup></p>
 <h3 id="the-peer-protocol">The peer protocol</h3>
-<p>After the client connects to a peer via TCP, they exchange
-handshakes. Then, one or both of them tell the other that it can
-start to request blocks. The client then makes a request for a block in some
-piece it chose<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>, its peer sends it, the client saves it and requests
-another block. Repeat until finished.</p>
+<ul>
+<li>After the client connected the peer via TCP, they exchange handshakes.</li>
+<li>One or both tells the other that it can start requesting blocks.</li>
+<li>The client then requests a block from a piece it chose<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>, its peer sends it,
+and the client saves it.</li>
+<li>Repeat until finished.</li>
+</ul>
 <p>That&rsquo;s about it, but perhaps surprising no one, a real world implementation will
 be quite a bit more complex. Let&rsquo;s see some of the complications.</p>
 <h2 id="key-optimizations">Key optimizations</h2>
-<p>(Nothing premature, promise!)</p>
+<p>(But nothing premature, promise!)</p>
 <h3 id="download-pipelining">Download pipelining</h3>
 <p>A naive implementation might do what was outlined above: send requests
 sequentially, one after the previous request was served. The problem with it is
@@ -259,17 +266,18 @@ a breeze to scale the code. But in rare cases it is not the most ergonomic way.<
 <h3 id="shared-data-channels-or-locking">Shared data: channels or locking?</h3>
 <p>While most tasks are concerned with their own data, peer sessions in a torrent
 need to access or mutate a part of the torrent state.</p>
-<p>For read-only shared data (which is the majority), this is a simple <code>Arc</code> away.
-But for shared mutable access, this was not so clear when
-I started writing this: do I use
-<a href="https://docs.rs/tokio/0.2.16/tokio/sync/struct.RwLock.html">locks</a>
-or full channel round-trips?</p>
+<p>For read-only shared data (which is the majority), this is a simple
+<a href="https://doc.rust-lang.org/std/sync/struct.Arc.html"><code>Arc</code></a> away.  But for
+shared mutable access, this was not so clear when
+I started: do I use
+<a href="https://docs.rs/tokio/0.2.16/tokio/sync/struct.RwLock.html">locks</a> or full
+channel round-trips?</p>
 <p>To be more concrete, the two entities that peer sessions need to interact with
 all the time:</p>
 <ul>
 <li><strong>piece picker</strong>: keeps track of what is already downloaded and is used by
 all sessions to choose which piece to download next.</li>
-<li><strong>piece downloads</strong>: the pending downloads. Peer sessions use it to
+<li><strong>piece downloads</strong>: the pending downloads. It is used to
 continue existing downloads and to administer received blocks.</li>
 </ul>
 <p>It would be possible to keep these in torrent and let peer sessions use
@@ -305,6 +313,8 @@ downloads: timeouts and salvaging late blocks. It is outside the scope to
 explain, but it meant accessing the above data in other places that
 would have made a channels based solution more convoluted.</li>
 </ul>
+<p>I&rsquo;ll go into more detail in a dedicated post as I feel this might be of
+interest.</p>
 <h3 id="disk-io">Disk IO</h3>
 <p>I mentioned that reading from and writing to disk uses blocking IO. Why not
 <code>tokio::fs</code> (which provides async versions of the standard lib equivalent)?
@@ -363,24 +373,22 @@ it ensured that my implementation was compatible with the rest of the ecosystem.
 doing), but without any micro-optimization, only a little profiling, and mostly
 just sane architectural decisions, the performance is quite good out of the
 gate.</p>
-<p>A real-life download of Ubuntu 20.04 (~2.8 GB), which is a well seeded torrent,
-downloading from 40-50 peers, comes down at ~9 MBps on my network. But that&rsquo;s
-also the exact capacity of my downlink, so this doesn&rsquo;t tell us much.</p>
-<p>Testing on localhost, with a single cratetorrent seed and leech, the current
-limit seems to be around 270 MBps. This value is from the second run, making use
-of the seed&rsquo;s saturated read cache. The first run fluctuated in the range
-of 160-200 MBps.<sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></p>
-<p>However, CPU usage on the seed is <em>very</em> high. Profiling points to the disk read
-function where half of the CPU time is taken up by <code>preadv</code> and the other by
-<code>__memset_avgx2__erms</code>. I have a suspicion as to what this might be but I&rsquo;ll
-leave this for another time.</p>
-<hr>
-<p>For comparison, with the same setup Transmission maxed out at 35 MBps! That&rsquo;s
-a 5-7x difference, and my seeding implementation isn&rsquo;t even optimized. (I made sure
-to turn off Transmission&rsquo;s upload rate limiting.)</p>
-<p>But this is by no means meant to be a shootout. Maybe one day I will return
-to a more thorough performance showdown that includes other clients&hellip;including
-libtorrent. :)</p>
+<p>A real-life download of Ubuntu 20.04 (~2.8 GB):</p>
+<ul>
+<li>with 40-50 peers;</li>
+<li>20% CPU usage on the leech;</li>
+<li>downlink capacity is around 9 MBps;</li>
+<li>and so is the download rate: 9 MBps.</li>
+</ul>
+<p>The above didn&rsquo;t tell us much. What about the <strong>theoretical limit</strong>?</p>
+<ul>
+<li>On localhost, using the virtual loopback device;</li>
+<li>with 1 cratetorrent seed and leech:</li>
+<li>160-20 MBps on the first run and 270 MBps on the second with saturated caches.</li>
+<li>Caveat: 100% CPU usage on the seed.<sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></li>
+<li>The same setup with Transmission (with rate limiting turned off), maxed out at
+35 MBps! That&rsquo;s a 4-7x diff! But I&rsquo;ll do a proper showdown at some point. :)</li>
+</ul>
 <h2 id="you-can-try-it-out">You can try it out!</h2>
 <p>Really! There is both a crate (or library), as well as a <em>very</em> anemic CLI app.</p>
 <p>However, there are some notable <strong>limitations</strong>:</p>
@@ -396,6 +404,12 @@ limiting), so it may not be suitable for slow systems.</li>
 <p>There is a lot more to come: profiling and optimizing, discussing other
 interesting aspects of both cratetorrent and tokio based apps in general, many
 features, and more.</p>
+<p>Also, I was asked on reddit whether the current design is
+theoretically suitable for gigabit thruputs (125 MBps). As per the above, it
+seems so! But it is unlikely in practice: finding a seed that can push these
+numbers, ISP throttling, slow networking hardware, etc. But I&rsquo;m confident I can
+take this even further&ndash;as said, the code hasn&rsquo;t really been optimized. What
+about <em>gigabyte</em> thruputs?</p>
 <p>Stay tuned.<sup id="fnref:13"><a href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup></p>
 <hr>
 <section class="footnotes" role="doc-endnotes">
@@ -471,11 +485,9 @@ a single write (due to the cumulative cost of repeatedly context switching into
 kernel-space). <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:11" role="doc-endnote">
-<p>I was asked on reddit whether the current design is
-theoretically suitable for gigabit thruputs (125 MBps). It seems so! But it is
-unlikely in practice: finding a seed that can push these numbers, ISP
-throttling, slow networking hardware, etc. But I&rsquo;m confident I can take this
-even further&ndash;as said, the code hasn&rsquo;t really been optimized. What about <em>gigabyte</em> thruputs? <a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Profiling points to the disk read routine, with <code>preadv</code> and
+<code>__memset_avgx2__erms</code> each taking up about half the CPU time there. I have a
+suspicion as to what this might be but I&rsquo;ll leave this for another time. <a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:12" role="doc-endnote">
 <p>It&rsquo;s fairly easy to feature-gate these to Linux and use a
